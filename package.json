@@ -1,0 +1,75 @@
+{
+  "name": "elemental",
+  "version": "1.1.0",
+  "description": "Elemental Browser",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "npm run build:mac",
+    "build:mac": "electron-builder --mac dmg zip",
+    "build:win": "electron-builder --win nsis portable --x64",
+    "build:linux": "electron-builder --linux AppImage",
+    "build:all": "npm run build:mac && npm run build:win && npm run build:linux",
+    "check": "node --check main.js && node --check preload.js && node --check overlay.js && node --check overlay-preload.js && node --check state-store.js",
+    "test": "node --test test",
+    "verify:mac": "codesign --verify --deep --strict --verbose=2 dist/mac-arm64/Elemental.app && spctl --assess --type execute --verbose=2 dist/mac-arm64/Elemental.app",
+    "notarize:mac": "test -n \"$APPLE_ID\" && test -n \"$APPLE_TEAM_ID\" && test -n \"$APPLE_APP_PASSWORD\" && xcrun notarytool submit dist/Elemental-1.1.0-arm64.dmg --apple-id \"$APPLE_ID\" --team-id \"$APPLE_TEAM_ID\" --password \"$APPLE_APP_PASSWORD\" --wait"
+  },
+  "build": {
+    "appId": "com.elemental.browser",
+    "productName": "Elemental",
+    "icon": "build/elemental-light.icns",
+    "extraResources": [
+      { "from": "build/elemental-light.icns", "to": "elemental-light.icns" },
+      { "from": "build/elemental-dark.icns", "to": "elemental-dark.icns" },
+      { "from": "Elemental Icons/Mac Elemental Icon Light.png", "to": "elemental-light.png" },
+      { "from": "Elemental Icons/Mac Elemental Icon Dark.png", "to": "elemental-dark.png" }
+    ],
+    "mac": {
+      "target": ["dmg", "zip"],
+      "category": "public.app-category.utilities",
+      "identity": null,
+      "icon": "build/elemental-light.icns",
+      "hardenedRuntime": true,
+      "minimumSystemVersion": "10.15.0",
+      "extendInfo": {
+        "CFBundleDisplayName": "Elemental",
+        "CFBundleName": "Elemental",
+        "LSApplicationCategoryType": "public.app-category.utilities",
+        "NSHighResolutionCapable": true,
+        "NSQuitAlwaysKeepsWindows": false
+      }
+    },
+    "win": {
+      "target": ["nsis", "portable"],
+      "icon": "build/elemental-windows.png"
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "category": "Utility",
+      "icon": "build/elemental-windows.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowElevation": true,
+      "deleteAppDataOnUninstall": false,
+      "include": "build/installer.nsh"
+    },
+    "npmRebuild": false
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^28.3.3",
+    "electron-builder": "^24.9.1"
+  },
+  "optionalDependencies": {
+    "macos-haptic": "^1.0.0"
+  },
+  "allowScripts": {
+    "macos-haptic": true,
+    "electron": true
+  }
+}

@@ -1,0 +1,1707 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Elemental</title>
+  <style>
+    :root {
+      --theme-color: #f6f6f6;
+      --theme-text: #000;
+      --tab-bar-bg: rgba(0, 0, 0, 0.08); /* Darkens the theme slightly for the tab bar */
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--theme-color);
+      border-bottom: 1px solid #ccc;
+      transition: background-color 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    body.page-fullscreen .title-bar,
+    body.page-fullscreen .tab-bar,
+    body.page-fullscreen .toolbar,
+    body.page-fullscreen #settings-panel,
+    body.page-fullscreen #science-lab { display: none !important; }
+    body.mac-window.window-inactive:not(.page-fullscreen) .title-bar::before {
+      content: '';
+      position: absolute;
+      left: 12px;
+      top: 8px;
+      width: 10px;
+      height: 10px;
+      border: 1px solid rgba(80, 80, 80, 0.55);
+      border-radius: 50%;
+      box-shadow: 20px 0 0 -1px var(--theme-color), 20px 0 0 0 rgba(80, 80, 80, 0.55), 40px 0 0 -1px var(--theme-color), 40px 0 0 0 rgba(80, 80, 80, 0.55);
+      pointer-events: none;
+    }
+
+    /* Title Bar */
+    .title-bar {
+      height: 28px;
+      width: 100%;
+      background: var(--theme-color);
+      -webkit-app-region: drag;
+      position: relative;
+      z-index: 3;
+    }
+
+    /* Tab Bar (Chrome Style) */
+    .tab-bar {
+      display: flex;
+      background: var(--theme-color);
+      position: relative;
+      align-items: center;
+      height: 38px;
+      padding-left: 8px;
+      padding-right: 12px;
+    }
+    .tab-bar::before {
+      /* Overlay to make tab bar slightly darker than toolbar */
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: var(--tab-bar-bg);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    #tabs-container {
+      display: flex;
+      flex: 1;
+      align-items: center;
+      height: 100%;
+      overflow: hidden;
+      min-width: 0;
+      gap: 2px;
+      z-index: 1;
+    }
+
+    .tab {
+      display: flex;
+      align-items: center;
+      background: transparent;
+      height: 32px;
+      min-width: 40px;
+      max-width: 240px;
+      flex: 0 1 240px;
+      padding: 0 10px;
+      margin: 0;
+      border-radius: 8px 8px 0 0;
+      font-size: 12px;
+      -webkit-app-region: no-drag;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.2s ease, box-shadow 0.2s ease;
+      position: relative;
+      color: var(--theme-text);
+      opacity: 0.8;
+    }
+
+    .tab:hover {
+      background: rgba(0,0,0,0.06);
+      box-shadow: inset 0 -2px 0 rgba(26, 115, 232, 0.35);
+      z-index: 10;
+    }
+
+    .tab.active {
+      background: var(--theme-color);
+      font-weight: 500;
+      color: var(--theme-text);
+      opacity: 1;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      z-index: 2;
+    }
+
+    /* Tab Separators */
+    .tab:not(.active)::after {
+      content: '';
+      position: absolute;
+      right: -2px;
+      top: 25%;
+      height: 50%;
+      width: 1px;
+      background-color: rgba(0,0,0,0.2);
+      transition: opacity 0.2s;
+    }
+    /* Hide separator if it's the last tab, or if it's right before the active tab */
+    .tab.hide-separator::after,
+    .tab:hover::after {
+      opacity: 0;
+    }
+
+    .tab-title {
+      flex-grow: 1;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      margin-left: 6px;
+    }
+
+    .tab-close {
+      margin-left: 5px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 14px;
+      opacity: 0;
+      transition: opacity 0.2s, background 0.2s;
+    }
+    .tab:hover .tab-close, .tab.active .tab-close {
+      opacity: 1;
+    }
+    .tab-close:hover {
+      background: rgba(0,0,0,0.1);
+    }
+
+    .new-tab-btn {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      -webkit-app-region: no-drag;
+      margin-left: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      font-size: 20px;
+      font-weight: 300;
+      z-index: 1;
+      color: var(--theme-text);
+      opacity: 0.7;
+    }
+    .new-tab-btn:hover {
+      background: rgba(0,0,0,0.08);
+      opacity: 1;
+    }
+
+    /* Tab Groups */
+    .tab-group-container {
+      display: flex;
+      align-items: center;
+      position: relative;
+      margin: 0 2px;
+      padding: 0 2px;
+      border-radius: 8px;
+      transition: background 0.2s ease;
+    }
+
+    .tab-group-header {
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      height: 24px;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+      flex-shrink: 0;
+      margin-right: 4px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+      z-index: 5;
+    }
+
+    .tab-group-header:hover {
+      filter: brightness(1.1);
+    }
+
+    .tab-group-line {
+      position: absolute;
+      top: 38px;
+      left: 4px;
+      right: 4px;
+      height: 3px;
+      border-radius: 3px;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .tab-group-container.collapsed .tab {
+      display: none !important;
+    }
+
+    /* Drag and Drop styling */
+    .tab.drag-over {
+      opacity: 0.5;
+    }
+    .tab-group-header.drag-over {
+      transform: scale(1.05);
+    }
+
+    /* Spinner */
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(0,0,0,0.2);
+      border-top-color: #1a73e8;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      flex-shrink: 0;
+      margin-right: 6px;
+    }
+
+    /* Toolbar (Chrome Style) */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      height: 48px;
+      padding: 0 8px;
+      box-sizing: border-box;
+      background: var(--theme-color);
+      position: relative;
+      z-index: 2;
+    }
+
+    .nav-buttons {
+      display: flex;
+      gap: 4px;
+      margin-right: 8px;
+    }
+
+    button.icon-btn {
+      background: transparent;
+      border: none;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      cursor: pointer;
+      color: var(--theme-text);
+      transition: background 0.2s ease;
+      opacity: 0.8;
+    }
+    button.icon-btn:hover {
+      background: rgba(0,0,0,0.08);
+      opacity: 1;
+    }
+    button.icon-btn:active {
+      background: rgba(0,0,0,0.15);
+    }
+
+    .address-bar {
+      flex-grow: 1;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin: 0 8px;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .search-container {
+      display: flex;
+      flex-grow: 1;
+      background: #f1f3f4; /* Chrome's omnibox color */
+      border-radius: 20px;
+      align-items: center;
+      padding: 0 12px;
+      height: 34px;
+      border: 1px solid transparent;
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    .search-container:focus-within {
+      background: #fff;
+      box-shadow: 0 0 0 1px #ccc, 0 2px 6px rgba(0,0,0,0.05);
+    }
+
+    .bookmarks-bar {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      height: 30px;
+      padding: 0 12px;
+      background: var(--theme-color);
+      border-top: 1px solid rgba(0,0,0,0.08);
+      border-bottom: 1px solid rgba(0,0,0,0.12);
+      color: var(--theme-text);
+      overflow: hidden;
+    }
+    .bookmark-link {
+      border: 0;
+      background: transparent;
+      color: inherit;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 11px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .bookmark-link:hover { background: rgba(0,0,0,0.08); }
+    .chrome-action { font-size: 16px !important; }
+    body:not(.prebeta-mode) .bookmarks-bar,
+    body:not(.prebeta-mode) .chrome-action { display: none !important; }
+    body:not(.prebeta-mode) .tab-bar { height: 44px; }
+    body:not(.prebeta-mode) .tab { height: 34px; border-radius: 10px; transition: background 0.2s ease, transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    body:not(.prebeta-mode) .tab:hover { box-shadow: none; transform: scale(1.05); }
+    body:not(.prebeta-mode) .toolbar { height: 46px; }
+
+    .search-container select {
+      background: transparent;
+      border: none;
+      outline: none;
+      font-size: 13px;
+      color: #5f6368;
+      cursor: pointer;
+      padding-right: 8px;
+      margin-right: 8px;
+      border-right: 1px solid #dadce0;
+    }
+
+    input {
+      flex-grow: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-size: 14px;
+      color: #202124;
+    }
+
+    .right-buttons {
+      display: flex;
+      gap: 4px;
+    }
+
+    /* Settings Panel */
+    .settings-panel {
+      position: absolute;
+      top: 118px;
+      right: 10px;
+      width: 500px;
+      max-height: 600px;
+      overflow-y: auto;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      padding: 20px;
+      display: none;
+      z-index: 1000;
+    }
+    .settings-overlay-mode {
+      background: transparent;
+      overflow: hidden;
+    }
+    .settings-overlay-mode .settings-panel {
+      position: absolute;
+      inset: 0;
+      width: auto;
+      max-height: none;
+      border-radius: 12px;
+      box-sizing: border-box;
+      display: block;
+    }
+    .settings-overlay-mode > *:not(.settings-panel) {
+      display: none !important;
+    }
+    .settings-panel h3 {
+      margin-top: 0;
+      margin-bottom: 20px;
+      font-size: 18px;
+      color: #000;
+    }
+    .setting-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      font-size: 14px;
+      color: #000;
+    }
+    .settings-divider {
+      height: 1px;
+      background: #eee;
+      margin: 20px 0;
+    }
+
+    /* Periodic Table Grid */
+    .periodic-table {
+      display: grid;
+      grid-template-columns: repeat(18, 1fr);
+      gap: 2px;
+      margin-top: 10px;
+    }
+    .pt-element {
+      aspect-ratio: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      background: #f9f9f9;
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease, z-index 0s;
+      position: relative;
+      color: #000;
+    }
+    .pt-element:hover {
+      transform: scale(1.35);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      z-index: 10;
+    }
+    .pt-empty {
+      border: none;
+      background: transparent;
+    }
+    .pt-symbol {
+      font-size: 14px;
+    }
+    .pt-number {
+      font-size: 8px;
+      color: #666;
+    }
+
+    /* Toggle Switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 20px;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 20px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: #1a73e8; /* Chrome blue */
+    }
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+
+    /* Standard Chrome Overlays */
+    #hover-url-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      background: #e0e0e0;
+      color: #333;
+      padding: 4px 8px;
+      font-size: 11px;
+      border-top-right-radius: 4px;
+      z-index: 10000;
+      display: none;
+      max-width: 500px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #downloads-bar {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      left: 0;
+      background: #f1f3f4;
+      border-top: 1px solid #ccc;
+      padding: 10px;
+      z-index: 9000;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: #333;
+    }
+    .download-item {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 6px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Plugins Modal */
+    .plugins-modal {
+      display: none;
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 2000;
+      width: 300px;
+    }
+    .plugins-modal h2 { margin-top: 0; }
+    .plugin-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .plugin-btn {
+      padding: 5px 10px;
+      background: #ccc;
+      color: #666;
+      border: none;
+      border-radius: 4px;
+      cursor: not-allowed;
+    }
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1999;
+    }
+
+    /* Science Lab */
+    #science-lab {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 280px;
+      background: #17212b;
+      border-top: 4px solid #34495e;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 0;
+      padding: 12px;
+      box-sizing: border-box;
+      align-items: stretch;
+      justify-content: stretch;
+      color: #ecf0f1;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      z-index: 500;
+    }
+    #science-lab > .lab-bench, #science-lab > .bunsen-burner, #science-lab > .flask { display: none; }
+    .lab-bench {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 30px;
+      background: #7f8c8d;
+      border-top: 4px solid #95a5a6;
+    }
+    .lab-sidebar { width: 190px; min-height: 0; padding: 4px 12px 30px 0; z-index: 20; overflow-y: auto; }
+    .lab-sidebar h3 { margin: 0 0 8px; font-size: 16px; }
+    .lab-sidebar p { font-size: 11px; color: #aab7c4; margin: 8px 0; }
+    .lab-tool { display: flex; gap: 6px; flex-wrap: wrap; }
+    .lab-tool button, .lab-control button { border: 1px solid #526273; background: #263747; color: #fff; border-radius: 4px; padding: 6px 8px; cursor: pointer; font-size: 11px; }
+    .lab-tool button:hover, .lab-control button:hover { background: #365069; }
+    .lab-control { margin-top: 10px; font-size: 11px; }
+    .lab-control label { display: block; margin: 7px 0 3px; color: #b9c6d2; }
+    .lab-control input[type="range"] { width: 100%; }
+    .lab-readout { margin-top: 10px; padding: 7px; background: #101820; border-radius: 4px; line-height: 1.5; white-space: pre-line; font-variant-numeric: tabular-nums; }
+    #lab-canvas { flex: 1 1 auto; min-width: 0; min-height: 0; display: block; border: 1px solid #405367; border-radius: 5px; background: #dbe7ef; cursor: crosshair; z-index: 5; }
+    .lab-hint { position: absolute; left: 205px; top: 15px; color: #34495e; background: rgba(255,255,255,.7); padding: 4px 7px; border-radius: 3px; font-size: 11px; z-index: 10; }
+    .bunsen-burner {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 40px;
+      height: 50px;
+      cursor: pointer;
+    }
+    .burner-base {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      height: 30px;
+      background: #bdc3c7;
+      border-radius: 4px 4px 0 0;
+      border: 2px solid #95a5a6;
+    }
+    .burner-base::after {
+      content: '';
+      position: absolute;
+      top: -10px;
+      left: 10px;
+      width: 16px;
+      height: 10px;
+      background: #7f8c8d;
+    }
+    .flame {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 20px;
+      height: 30px;
+      background: #3498db;
+      border-radius: 50% 50% 20% 20%;
+      box-shadow: 0 0 15px #3498db, inset 0 0 10px #e74c3c;
+      display: none;
+      animation: flicker 0.1s infinite alternate;
+      pointer-events: none;
+    }
+    .flame.active {
+      display: block;
+    }
+    @keyframes flicker {
+      0% { transform: translateX(-50%) scale(1); opacity: 0.9; }
+      100% { transform: translateX(-50%) scale(1.05); opacity: 1; }
+    }
+    .flask {
+      position: absolute;
+      width: 40px;
+      height: 60px;
+      border: 3px solid rgba(255,255,255,0.6);
+      border-top: none;
+      border-radius: 0 0 20px 20px;
+      cursor: grab;
+      user-select: none;
+      z-index: 10;
+      transition: transform 0.1s;
+    }
+    .flask:active {
+      cursor: grabbing;
+      transform: scale(1.1);
+    }
+    .flask-liquid {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60%;
+      border-radius: 0 0 15px 15px;
+      transition: background-color 0.5s;
+    }
+    .flask-smoke {
+      position: absolute;
+      top: -20px;
+      left: 50%;
+      width: 10px;
+      height: 10px;
+      background: rgba(255,255,255,0.6);
+      border-radius: 50%;
+      animation: smoke-rise 2s infinite linear;
+    }
+    @keyframes smoke-rise {
+      0% { transform: translate(-50%, 0) scale(1); opacity: 0.8; }
+      100% { transform: translate(-50%, -60px) scale(3); opacity: 0; }
+    }
+    .flask-bubble {
+      position: absolute;
+      background: rgba(255,255,255,0.8);
+      border-radius: 50%;
+      bottom: 5px;
+      animation: bubble-rise 1s infinite ease-in;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="title-bar"></div>
+
+  <div class="tab-bar" id="tab-bar">
+    <div id="tabs-container"></div>
+    <div class="new-tab-btn" id="new-tab-btn">+</div>
+  </div>
+
+  <div class="toolbar">
+    <div class="nav-buttons">
+      <button class="icon-btn" id="back-btn" title="Back">←</button>
+      <button class="icon-btn" id="forward-btn" title="Forward">→</button>
+      <button class="icon-btn" id="reload-btn" title="Reload">↻</button>
+    </div>
+    <div class="address-bar">
+      <div class="search-container">
+        <select id="search-engine">
+          <option value="google">Google</option>
+          <option value="yahoo">Yahoo</option>
+          <option value="duckduckgo">DuckDuckGo</option>
+        </select>
+        <input type="text" id="url-input" placeholder="Search Google or type a URL" value="" spellcheck="false" />
+      </div>
+    </div>
+    <div class="right-buttons">
+      <button class="icon-btn chrome-action" title="Extensions" aria-label="Extensions">puzzle</button>
+      <button class="icon-btn chrome-action" title="Profile" aria-label="Profile">●</button>
+      <button class="icon-btn" id="settings-btn" title="Settings">⋮</button>
+    </div>
+  </div>
+  <div class="bookmarks-bar" aria-label="Bookmarks">
+    <button class="bookmark-link" data-bookmark-url="https://www.google.com">Google</button>
+    <button class="bookmark-link" data-bookmark-url="https://www.youtube.com">YouTube</button>
+    <button class="bookmark-link" data-bookmark-url="https://github.com">GitHub</button>
+    <button class="bookmark-link" data-bookmark-url="https://developer.mozilla.org">MDN</button>
+  </div>
+
+  <!-- Settings Panel -->
+  <div class="settings-panel" id="settings-panel">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h3>Settings</h3>
+      <button id="close-settings-btn" title="Close settings" style="font-size:20px; border:0; background:transparent; cursor:pointer;">&times;</button>
+    </div>
+    <button id="import-bookmarks-btn" style="margin-bottom:10px; padding:6px; cursor:pointer;">Import Chrome Bookmarks</button>
+    <button id="view-history-btn" style="margin-bottom:10px; padding:6px; cursor:pointer;">View History</button>
+    <button id="plugins-btn" style="margin-bottom:20px; padding:6px; cursor:pointer;">Plugins / Extensions</button>
+    <div class="setting-item">
+      <span>Bro, are you serious?</span>
+      <label class="switch">
+        <input type="checkbox" id="toggle-papyrus">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="setting-item">
+      <span>This has gone too far</span>
+      <label class="switch">
+        <input type="checkbox" id="toggle-comicsans">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="setting-item">
+      <span>Atom Mode</span>
+      <label class="switch">
+        <input type="checkbox" id="toggle-atom">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="setting-item">
+      <span>Black Hole (Self Explanatory)</span>
+      <label class="switch">
+        <input type="checkbox" id="toggle-blackhole">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="setting-item">
+      <span>Cat</span>
+      <label class="switch">
+        <input type="checkbox" id="toggle-cat">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="setting-item">
+      <span>MaKe It GoOsE</span>
+      <label class="switch">
+        <input type="checkbox" id="toggle-goose">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="setting-item">
+      <span>Science Mode</span>
+      <label class="switch">
+        <input type="checkbox" id="toggle-science">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="setting-item">
+      <span>0 Gravity</span>
+      <label class="switch">
+        <input type="checkbox" id="toggle-zerogravity">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="settings-divider"></div>
+    <h3>The Periodic Table</h3>
+    <div class="periodic-table" id="periodic-table">
+      <!-- Generated via JS -->
+    </div>
+  </div>
+
+  <!-- Science Lab -->
+  <div id="science-lab">
+    <div class="lab-sidebar">
+      <h3>Science Lab</h3>
+      <p>Build an experiment. Drag tools into the workspace and combine materials.</p>
+      <div class="lab-tool">
+        <button data-lab-material="water">Water</button>
+        <button data-lab-material="acid">Acid</button>
+        <button data-lab-material="base">Base</button>
+        <button data-lab-material="salt">Salt</button>
+        <button data-lab-material="metal">Metal</button>
+      </div>
+      <div class="lab-control">
+        <button id="lab-pause">Pause</button> <button id="lab-reset">Reset</button>
+        <label for="lab-gravity">Gravity</label><input id="lab-gravity" type="range" min="0" max="1.5" value="0.03" step="0.01">
+        <label for="lab-heat">Burner power</label><input id="lab-heat" type="range" min="0" max="100" value="0" step="1">
+        <div class="lab-readout" id="lab-readout">Temperature: 20 C<br>pH: 7.0<br>Energy: 0 J</div>
+      </div>
+    </div>
+    <div class="lab-hint">Drag objects. Click the burner to heat nearby vessels.</div>
+    <canvas id="lab-canvas" aria-label="Interactive science laboratory"></canvas>
+    <!-- Legacy nodes remain hidden; the canvas lab owns the simulation. -->
+    <div class="lab-bench"></div>
+
+    <div class="bunsen-burner" id="bunsen-burner" onclick="toggleBurner()">
+      <div class="flame" id="bunsen-flame"></div>
+      <div class="burner-base"></div>
+    </div>
+
+    <div class="flask" id="flask-1" style="left: 100px; bottom: 30px;">
+      <div class="flask-liquid" style="background-color: rgba(52, 152, 219, 0.8);"></div>
+    </div>
+    <div class="flask" id="flask-2" style="left: 200px; bottom: 30px;">
+      <div class="flask-liquid" style="background-color: rgba(46, 204, 113, 0.8);"></div>
+    </div>
+    <div class="flask" id="flask-3" style="left: 300px; bottom: 30px;">
+      <div class="flask-liquid" style="background-color: rgba(231, 76, 60, 0.8);"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="plugins-overlay" onclick="document.getElementById('plugins-modal').style.display='none'; this.style.display='none';"></div>
+  <div class="plugins-modal" id="plugins-modal">
+    <h2>Available Plugins</h2>
+    <div class="plugin-item">
+      <span>ProtonVPN</span>
+      <button class="plugin-btn" title="Coming soon in v2.0">Install</button>
+    </div>
+    <div class="plugin-item">
+      <span>NordVPN</span>
+      <button class="plugin-btn" title="Coming soon in v2.0">Install</button>
+    </div>
+    <div class="plugin-item">
+      <span>ExpressVPN</span>
+      <button class="plugin-btn" title="Coming soon in v2.0">Install</button>
+    </div>
+    <p style="font-size:12px; color:#666; margin-top:20px;">Plugin architecture is currently in development. Full support for third-party VPN plugins is coming in version 2.0.</p>
+  </div>
+
+  <div id="hover-url-bar"></div>
+  <div id="downloads-bar"></div>
+
+  <script src="matter.min.js"></script>
+  <script>
+    const pageQuery = new URLSearchParams(window.location.search);
+    const isSettingsOverlay = pageQuery.has('settingsOverlay');
+    const isPreBetaMode = pageQuery.has('prebeta');
+    if (isPreBetaMode) document.body.classList.add('prebeta-mode');
+    if (isSettingsOverlay) document.body.classList.add('settings-overlay-mode');
+    const urlInput = document.getElementById('url-input');
+    const backBtn = document.getElementById('back-btn');
+    const forwardBtn = document.getElementById('forward-btn');
+    const reloadBtn = document.getElementById('reload-btn');
+    const newTabBtn = document.getElementById('new-tab-btn');
+    const tabsContainer = document.getElementById('tabs-container');
+    const searchEngine = document.getElementById('search-engine');
+    const settingsBtn = document.getElementById('settings-btn');
+    const tabBar = document.getElementById('tab-bar');
+
+    let tabs = {};
+    let activeTabId = null;
+    let tabGroups = {};
+    let tabOrder = [];
+    let dragSourceId = null;
+
+    function getRandomColor() {
+      const colors = ['#ff6b6b', '#feca57', '#48dbfb', '#ff9ff3', '#54a0ff', '#1dd1a1'];
+      return colors[Math.floor(Math.random() * colors.length)];
+    }
+
+    function createGroup(label) {
+      const id = 'g_' + Date.now();
+      tabGroups[id] = { label, color: getRandomColor(), collapsed: false };
+      return id;
+    }
+
+    function renderTabs() {
+      tabsContainer.innerHTML = '';
+
+      const currentTabIds = Object.keys(tabs);
+      tabOrder = tabOrder.filter(id => currentTabIds.includes(id));
+      currentTabIds.forEach(id => {
+        if (!tabOrder.includes(id)) tabOrder.push(id);
+      });
+
+      let currentGroupId = null;
+      let currentGroupContainer = null;
+
+      for (let i = 0; i < tabOrder.length; i++) {
+        const id = tabOrder[i];
+        const tab = tabs[id];
+        const groupId = tab.groupId || null;
+
+        if (groupId !== currentGroupId) {
+          currentGroupId = groupId;
+
+          if (groupId && tabGroups[groupId]) {
+             const group = tabGroups[groupId];
+             currentGroupContainer = document.createElement('div');
+             currentGroupContainer.className = 'tab-group-container';
+             if (group.collapsed) currentGroupContainer.classList.add('collapsed');
+
+             const header = document.createElement('div');
+             header.className = 'tab-group-header';
+             header.style.backgroundColor = group.color;
+             header.innerText = group.label;
+             header.title = "Right click to rename";
+             header.onclick = () => {
+                group.collapsed = !group.collapsed;
+                renderTabs();
+             };
+
+             header.oncontextmenu = (e) => {
+               e.preventDefault();
+               const newName = prompt('Enter new group name:', group.label);
+               if (newName) {
+                 group.label = newName;
+                 renderTabs();
+               }
+             };
+
+             const line = document.createElement('div');
+             line.className = 'tab-group-line';
+             line.style.backgroundColor = group.color;
+
+             header.ondragover = e => { e.preventDefault(); header.classList.add('drag-over'); };
+             header.ondragleave = e => { header.classList.remove('drag-over'); };
+             header.ondrop = e => {
+               e.preventDefault();
+               header.classList.remove('drag-over');
+               if (dragSourceId && dragSourceId !== id) {
+                 tabs[dragSourceId].groupId = groupId;
+                 tabOrder.splice(tabOrder.indexOf(dragSourceId), 1);
+                 tabOrder.splice(tabOrder.indexOf(id), 0, dragSourceId);
+                 renderTabs();
+               }
+             };
+
+             currentGroupContainer.appendChild(header);
+             currentGroupContainer.appendChild(line);
+             tabsContainer.appendChild(currentGroupContainer);
+          } else {
+             currentGroupContainer = null;
+          }
+        }
+
+        const tabEl = document.createElement('div');
+        let className = 'tab';
+        if (id === activeTabId) className += ' active';
+
+        if (i === tabOrder.length - 1 || tabOrder[i+1] === activeTabId) {
+          className += ' hide-separator';
+        }
+        tabEl.className = className;
+
+        if (tab.isLoading) {
+          const spinEl = document.createElement('div');
+          spinEl.className = 'spinner';
+          tabEl.appendChild(spinEl);
+        } else if (tab.favicon) {
+          const imgEl = document.createElement('img');
+          imgEl.src = tab.favicon;
+          imgEl.style.width = '16px';
+          imgEl.style.height = '16px';
+          imgEl.style.marginRight = '6px';
+          tabEl.appendChild(imgEl);
+        } else {
+          const iconEl = document.createElement('div');
+          iconEl.style.width = '16px';
+          iconEl.style.height = '16px';
+          iconEl.style.borderRadius = '50%';
+          iconEl.style.background = '#ccc';
+          iconEl.style.flexShrink = '0';
+          iconEl.style.marginRight = '6px';
+          tabEl.appendChild(iconEl);
+        }
+
+        const titleEl = document.createElement('div');
+        titleEl.className = 'tab-title';
+        titleEl.innerText = tab.title || 'New Tab';
+
+        const closeEl = document.createElement('div');
+        closeEl.className = 'tab-close';
+        closeEl.textContent = '\u00d7';
+        closeEl.onclick = (e) => {
+          e.stopPropagation();
+          window.browserAPI.closeTab(id);
+        };
+
+        tabEl.onclick = () => {
+          window.browserAPI.switchTab(id);
+          activeTabId = id;
+          renderTabs();
+          urlInput.value = tabs[id].url || '';
+        };
+
+        tabEl.addEventListener('mouseenter', () => {
+          if (window.browserAPI && window.browserAPI.triggerHaptic) {
+            window.browserAPI.triggerHaptic();
+          }
+        });
+
+        tabEl.draggable = true;
+        tabEl.ondragstart = (e) => {
+          dragSourceId = id;
+        };
+        tabEl.ondragover = e => { e.preventDefault(); tabEl.classList.add('drag-over'); };
+        tabEl.ondragleave = e => { tabEl.classList.remove('drag-over'); };
+        tabEl.ondrop = e => {
+          e.preventDefault();
+          tabEl.classList.remove('drag-over');
+          if (dragSourceId && dragSourceId !== id) {
+            if (tabs[id].groupId) {
+              tabs[dragSourceId].groupId = tabs[id].groupId;
+            } else {
+              const newGroupId = createGroup('Group');
+              tabs[id].groupId = newGroupId;
+              tabs[dragSourceId].groupId = newGroupId;
+            }
+            tabOrder.splice(tabOrder.indexOf(dragSourceId), 1);
+            tabOrder.splice(tabOrder.indexOf(id), 0, dragSourceId);
+            renderTabs();
+          }
+        };
+
+        tabEl.oncontextmenu = (e) => {
+          e.preventDefault();
+          if (tabs[id].groupId) {
+            tabs[id].groupId = null;
+            renderTabs();
+          } else {
+             tabs[id].groupId = createGroup('Group');
+             renderTabs();
+          }
+        };
+
+        tabEl.appendChild(titleEl);
+        tabEl.appendChild(closeEl);
+
+        if (currentGroupContainer) {
+           currentGroupContainer.appendChild(tabEl);
+        } else {
+           tabsContainer.appendChild(tabEl);
+        }
+      }
+    }
+
+    window.browserAPI.onTabCreated((id) => {
+      tabs[id] = { url: 'https://www.google.com', title: 'Loading...' };
+      activeTabId = id;
+      renderTabs();
+      // Auto-focus URL bar so user can start typing immediately
+      setTimeout(() => { urlInput.focus(); urlInput.select(); }, 100);
+    });
+
+    window.browserAPI.onTabClosed((id) => {
+      delete tabs[id];
+      renderTabs();
+    });
+
+    if (window.browserAPI.onTabSwitched) {
+      window.browserAPI.onTabSwitched((id) => {
+        if (tabs[id]) {
+          activeTabId = id;
+          renderTabs();
+          urlInput.value = tabs[id].url || '';
+        }
+      });
+    }
+
+    window.browserAPI.onUrlChanged((id, url) => {
+      if (tabs[id]) {
+        tabs[id].url = url;
+        // basic history logging
+        window._historyLog = window._historyLog || [];
+        if (window._historyLog[window._historyLog.length-1] !== url) {
+          window._historyLog.push(url);
+        }
+        if (id === activeTabId) {
+          urlInput.value = url;
+        }
+      }
+    });
+
+    window.browserAPI.onTitleChanged((id, title) => {
+      if (tabs[id]) {
+        tabs[id].title = title;
+        renderTabs();
+      }
+    });
+
+    let isCreatingTab = false;
+    newTabBtn.onclick = () => {
+      if (isCreatingTab) return;
+      isCreatingTab = true;
+      window.browserAPI.newTab();
+      setTimeout(() => isCreatingTab = false, 300);
+    };
+
+    function isUrl(string) {
+      try {
+        new URL(string);
+        return true;
+      } catch (_) {
+        const domainPattern = /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        return domainPattern.test(string) || string.startsWith('localhost:');
+      }
+    }
+
+    function getSearchUrl(query, engine) {
+      const encodedQuery = encodeURIComponent(query);
+      if (engine === 'yahoo') {
+        return 'https://search.yahoo.com/search?p=' + encodedQuery;
+      } else if (engine === 'duckduckgo') {
+        return 'https://duckduckgo.com/?q=' + encodedQuery;
+      }
+      return 'https://www.google.com/search?q=' + encodedQuery;
+    }
+
+    urlInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        let input = urlInput.value.trim();
+        if (isUrl(input)) {
+           window.browserAPI.navigateTo(input);
+        } else {
+           window.browserAPI.navigateTo(getSearchUrl(input, searchEngine.value));
+        }
+      }
+    });
+
+    document.querySelectorAll('[data-bookmark-url]').forEach((bookmark) => {
+      bookmark.addEventListener('click', () => window.browserAPI.navigateTo(bookmark.dataset.bookmarkUrl));
+    });
+
+    backBtn.addEventListener('click', () => { window.browserAPI.goBack(); });
+    forwardBtn.addEventListener('click', () => { window.browserAPI.goForward(); });
+    reloadBtn.addEventListener('click', () => { window.browserAPI.reload(); });
+    searchEngine.addEventListener('change', () => { window.browserAPI.reload(); });
+
+    // Settings Toggle Logic
+    const settingsPanel = document.getElementById('settings-panel');
+    let settingsOpen = false;
+
+    function openSettings() {
+      settingsOpen = true;
+      settingsPanel.style.display = 'block';
+      window.browserAPI.toggleSettingsPanel(true);
+    }
+
+    function closeSettings() {
+      settingsOpen = false;
+      settingsPanel.style.display = 'none';
+      window.browserAPI.toggleSettingsPanel(false);
+    }
+
+    settingsBtn.addEventListener('click', () => {
+      if (settingsOpen) { closeSettings(); } else { openSettings(); }
+    });
+    document.getElementById('close-settings-btn').addEventListener('click', closeSettings);
+
+    window.browserAPI.onOpenSettings(() => {
+      if (settingsOpen) { closeSettings(); } else { openSettings(); }
+    });
+    window.browserAPI.onSettingsOverlayClosed(() => {
+      settingsOpen = false;
+      settingsPanel.style.display = 'none';
+    });
+    window.browserAPI.onScienceModeChanged((enabled) => {
+      const lab = document.getElementById('science-lab');
+      lab.style.display = enabled ? 'flex' : 'none';
+      if (enabled) requestAnimationFrame(() => { labResize(); labReset(); });
+    });
+    window.browserAPI.onThemeChanged((gradient, textColor) => {
+      document.documentElement.style.setProperty('--theme-color', gradient);
+      document.documentElement.style.setProperty('--theme-text', textColor);
+    });
+    window.browserAPI.onPageFullscreenChanged((active) => {
+      document.body.classList.toggle('page-fullscreen', active);
+    });
+    window.browserAPI.onWindowFocusChanged((focused, isMac) => {
+      document.body.classList.toggle('mac-window', isMac);
+      document.body.classList.toggle('window-inactive', isMac && !focused);
+    });
+
+    const togglePapyrus = document.getElementById('toggle-papyrus');
+    const toggleComicSans = document.getElementById('toggle-comicsans');
+    const toggleAtom = document.getElementById('toggle-atom');
+    const toggleCat = document.getElementById('toggle-cat');
+    const toggleScience = document.getElementById('toggle-science');
+
+    window.browserAPI.onRestoredState((restoredState) => {
+      const settings = restoredState && restoredState.settings;
+      if (!settings) return;
+      togglePapyrus.checked = Boolean(settings.papyrus);
+      toggleComicSans.checked = Boolean(settings.comicsans);
+      toggleAtom.checked = Boolean(settings.atom);
+      toggleBlackHole.checked = Boolean(settings.blackhole);
+      toggleCat.checked = Boolean(settings.cat);
+      toggleGoose.checked = Boolean(settings.goose);
+      toggleScience.checked = Boolean(settings.science);
+      toggleZeroGravity.checked = Boolean(settings.zerogravity);
+      document.getElementById('science-lab').style.display = settings.science ? 'flex' : 'none';
+      window._historyLog = Array.isArray(restoredState.history) ? restoredState.history : [];
+    });
+
+    document.getElementById('import-bookmarks-btn').addEventListener('click', () => {
+      window.browserAPI.importBookmarks();
+    });
+
+    document.getElementById('view-history-btn').addEventListener('click', () => {
+      alert("History Tracker: \\n" + (window._historyLog || []).slice(-10).join('\\n'));
+    });
+
+    window.browserAPI.onBookmarksImported((urls) => {
+      alert('Imported ' + urls.length + ' bookmarks from Chrome!');
+      console.log(urls);
+    });
+
+    if (window.browserAPI.onTargetUrlChanged) {
+      window.browserAPI.onTargetUrlChanged((url) => {
+        const bar = document.getElementById('hover-url-bar');
+        if (url) {
+          bar.innerText = url;
+          bar.style.display = 'block';
+        } else {
+          bar.style.display = 'none';
+        }
+      });
+    }
+
+    if (window.browserAPI.onLoadingState) {
+      window.browserAPI.onLoadingState((id, isLoading) => {
+        if (tabs[id]) {
+          tabs[id].isLoading = isLoading;
+          renderTabs();
+        }
+      });
+    }
+
+    if (window.browserAPI.onFaviconChanged) {
+      window.browserAPI.onFaviconChanged((id, favicon) => {
+        if (tabs[id]) {
+          tabs[id].favicon = favicon;
+          renderTabs();
+        }
+      });
+    }
+
+    let downloadTimeout;
+    if (window.browserAPI.onDownloadStarted) {
+      const dBar = document.getElementById('downloads-bar');
+      function showDownload(message, isError, dismissAfter) {
+        dBar.replaceChildren();
+        const item = document.createElement('div');
+        item.className = 'download-item';
+        if (isError) item.style.color = 'red';
+        item.textContent = message;
+        item.addEventListener('click', () => { dBar.style.display = 'none'; });
+        dBar.appendChild(item);
+        dBar.style.display = 'flex';
+        if (dismissAfter) {
+          clearTimeout(downloadTimeout);
+          downloadTimeout = setTimeout(() => { dBar.style.display = 'none'; }, dismissAfter);
+        }
+      }
+      window.browserAPI.onDownloadStarted((filename) => {
+        showDownload('Downloading: ' + filename + '...');
+      });
+      window.browserAPI.onDownloadProgress((filename, progress) => {
+        const displayProgress = progress === 'paused' ? 'Paused' : progress == null ? 'Progress unavailable' : Math.round(progress * 100) + '%';
+        showDownload('Downloading: ' + filename + ' (' + displayProgress + ')');
+      });
+      window.browserAPI.onDownloadCompleted((filename, path) => {
+        showDownload('Finished: ' + filename + ' (Click to dismiss)', false, 5000);
+      });
+      window.browserAPI.onDownloadFailed((filename) => {
+        showDownload('Failed: ' + filename, true);
+      });
+    }
+
+    togglePapyrus.addEventListener('change', (e) => {
+      window.browserAPI.toggleSetting('papyrus', e.target.checked);
+      if (e.target.checked) {
+        toggleComicSans.checked = false;
+        window.browserAPI.toggleSetting('comicsans', false);
+      }
+    });
+
+    toggleComicSans.addEventListener('change', (e) => {
+      window.browserAPI.toggleSetting('comicsans', e.target.checked);
+      if (e.target.checked) {
+        togglePapyrus.checked = false;
+        window.browserAPI.toggleSetting('papyrus', false);
+      }
+    });
+
+    toggleAtom.addEventListener('change', (e) => {
+      window.browserAPI.toggleSetting('atom', e.target.checked);
+    });
+
+    const toggleBlackHole = document.getElementById('toggle-blackhole');
+    toggleBlackHole.addEventListener('change', (e) => {
+      window.browserAPI.toggleSetting('blackhole', e.target.checked);
+    });
+
+    toggleCat.addEventListener('change', (e) => {
+      window.browserAPI.toggleSetting('cat', e.target.checked);
+      if (!e.target.checked) {
+        toggleGoose.checked = false;
+        window.browserAPI.toggleSetting('goose', false);
+      }
+    });
+
+    const toggleGoose = document.getElementById('toggle-goose');
+    toggleGoose.addEventListener('change', (e) => {
+      window.browserAPI.toggleSetting('goose', e.target.checked);
+      if (e.target.checked && !toggleCat.checked) {
+        toggleCat.checked = true;
+        window.browserAPI.toggleSetting('cat', true);
+      }
+    });
+
+    toggleScience.addEventListener('change', (e) => {
+      document.getElementById('science-lab').style.display = e.target.checked ? 'flex' : 'none';
+      if (e.target.checked) { requestAnimationFrame(() => { labResize(); labReset(); }); }
+      window.browserAPI.toggleSetting('science', e.target.checked);
+    });
+
+    const toggleZeroGravity = document.getElementById('toggle-zerogravity');
+    toggleZeroGravity.addEventListener('change', (e) => {
+      window.browserAPI.toggleSetting('zerogravity', e.target.checked);
+    });
+
+    // Science Lab logic
+    let burnerOn = false;
+    window.toggleBurner = function() {
+      burnerOn = !burnerOn;
+      const flame = document.getElementById('bunsen-flame');
+      if (burnerOn) flame.classList.add('active');
+      else flame.classList.remove('active');
+      checkHeating();
+    };
+
+    let draggedFlask = null;
+    let offsetX = 0; let offsetY = 0;
+
+    document.querySelectorAll('.flask').forEach(flask => {
+      flask.addEventListener('mousedown', (e) => {
+        draggedFlask = flask;
+        const rect = flask.getBoundingClientRect();
+        offsetX = e.clientX - rect.left;
+        offsetY = e.clientY - rect.top;
+        flask.style.zIndex = 100;
+      });
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!draggedFlask) return;
+      let newX = e.clientX - offsetX;
+      let newY = e.clientY - offsetY;
+      draggedFlask.style.left = newX + 'px';
+      draggedFlask.style.top = newY + 'px';
+      draggedFlask.style.bottom = 'auto';
+    });
+
+    document.addEventListener('mouseup', (e) => {
+      if (!draggedFlask) return;
+      draggedFlask.style.zIndex = 10;
+      checkMixing(draggedFlask);
+      checkHeating();
+      draggedFlask = null;
+    });
+
+    function checkMixing(flask) {
+      const rect1 = flask.getBoundingClientRect();
+      document.querySelectorAll('.flask').forEach(other => {
+        if (flask === other) return;
+        const rect2 = other.getBoundingClientRect();
+        // Check intersection
+        if (!(rect1.right < rect2.left || rect1.left > rect2.right || rect1.bottom < rect2.top || rect1.top > rect2.bottom)) {
+          // Mix colors
+          const l1 = flask.querySelector('.flask-liquid');
+          const l2 = other.querySelector('.flask-liquid');
+          const col1 = window.getComputedStyle(l1).backgroundColor;
+          const col2 = window.getComputedStyle(l2).backgroundColor;
+          // Extract rgb arrays and average them
+          const rgb1 = col1.match(/\d+/g).map(Number);
+          const rgb2 = col2.match(/\d+/g).map(Number);
+          const mixed = `rgba(${Math.round((rgb1[0]+rgb2[0])/2)}, ${Math.round((rgb1[1]+rgb2[1])/2)}, ${Math.round((rgb1[2]+rgb2[2])/2)}, 0.8)`;
+          l1.style.backgroundColor = mixed;
+          l2.style.backgroundColor = mixed;
+          flask.style.left = (parseInt(flask.style.left) - 50) + 'px'; // push away
+        }
+      });
+    }
+
+    function checkHeating() {
+      const burner = document.getElementById('bunsen-burner');
+      const bRect = burner.getBoundingClientRect();
+      document.querySelectorAll('.flask').forEach(flask => {
+        const fRect = flask.getBoundingClientRect();
+        // Clear old animations
+        flask.querySelectorAll('.flask-smoke, .flask-bubble').forEach(el => el.remove());
+
+        // If above burner and burner is on
+        if (burnerOn && fRect.left < bRect.right && fRect.right > bRect.left && Math.abs(fRect.bottom - bRect.top) < 60) {
+          // Boil it!
+          for(let i=0; i<3; i++) {
+            let smoke = document.createElement('div');
+            smoke.className = 'flask-smoke';
+            smoke.style.animationDelay = (Math.random()) + 's';
+            flask.appendChild(smoke);
+          }
+          for(let i=0; i<5; i++) {
+            let b = document.createElement('div');
+            b.className = 'flask-bubble';
+            b.style.width = b.style.height = (Math.random()*4 + 2) + 'px';
+            b.style.left = (Math.random()*80 + 10) + '%';
+            b.style.animationDuration = (Math.random()*0.5 + 0.5) + 's';
+            b.style.animationDelay = (Math.random()) + 's';
+            flask.appendChild(b);
+          }
+        }
+      });
+    }
+
+    // Canvas lab: Matter.js owns objects, while this layer owns chemistry and presentation.
+    const labCanvas = document.getElementById('lab-canvas');
+    const labEngine = Matter.Engine.create();
+    const labWorld = labEngine.world;
+    const labObjects = new Map();
+    const labMaterials = {
+      water: { label: 'Water', color: '#3498db', density: 1, ph: 7, boiling: 100 },
+      acid: { label: 'Acid', color: '#e74c3c', density: 1.1, ph: 2, boiling: 102 },
+      base: { label: 'Base', color: '#2ecc71', density: 1.05, ph: 12, boiling: 104 },
+      salt: { label: 'Salt', color: '#ecf0f1', density: 2.1, ph: 7, boiling: 1000 },
+      metal: { label: 'Metal', color: '#95a5a6', density: 7.8, ph: 7, boiling: 1500 }
+    };
+    let labPaused = false;
+    let labGravity = 0.03;
+    let labHeat = 0;
+    let labEnergy = 0;
+    let labLastTime = performance.now();
+    let labWalls = [];
+
+    function labResize() {
+      const rect = labCanvas.getBoundingClientRect();
+      const ratio = window.devicePixelRatio || 1;
+      labCanvas.width = Math.max(1, rect.width * ratio);
+      labCanvas.height = Math.max(1, rect.height * ratio);
+      labCanvas.style.height = rect.height + 'px';
+      labWalls.forEach(wall => Matter.World.remove(labWorld, wall));
+      const w = rect.width; const h = rect.height;
+      labWalls = [
+        Matter.Bodies.rectangle(w / 2, h + 12, w, 24, { isStatic: true }),
+        Matter.Bodies.rectangle(-12, h / 2, 24, h, { isStatic: true }),
+        Matter.Bodies.rectangle(w + 12, h / 2, 24, h, { isStatic: true }),
+        Matter.Bodies.rectangle(w / 2, -12, w, 24, { isStatic: true })
+      ];
+      Matter.World.add(labWorld, labWalls);
+    }
+
+    function labAdd(materialKey, x, y) {
+      const material = labMaterials[materialKey];
+      const body = Matter.Bodies.circle(x, y, materialKey === 'metal' ? 18 : 24, {
+        restitution: 0.35, friction: 0.35, frictionAir: 0.012, density: material.density * 0.001
+      });
+      Matter.Body.setVelocity(body, { x: (Math.random() - 0.5) * 0.4, y: -0.4 });
+      const object = { body, materialKey, material, temperature: 20, volume: materialKey === 'metal' ? 0 : 100, reacted: false };
+      labObjects.set(body.id, object);
+      Matter.World.add(labWorld, body);
+      return object;
+    }
+
+    function labReset() {
+      labObjects.forEach(object => Matter.World.remove(labWorld, object.body));
+      labObjects.clear(); labEnergy = 0; labHeat = 0;
+      document.getElementById('lab-heat').value = 0;
+      const rect = labCanvas.getBoundingClientRect();
+      labAdd('water', rect.width * 0.3, rect.height * 0.55);
+      labAdd('acid', rect.width * 0.5, rect.height * 0.45);
+      labAdd('base', rect.width * 0.7, rect.height * 0.55);
+    }
+
+    function labMix(first, second) {
+      if (first.reacted || second.reacted) return;
+      const pair = [first.materialKey, second.materialKey].sort().join('+');
+      if (pair !== 'acid+base') return;
+      first.reacted = true; second.reacted = true;
+      first.materialKey = second.materialKey = 'water';
+      first.material = second.material = labMaterials.water;
+      first.temperature += 12; second.temperature += 12;
+      labEnergy += 120;
+    }
+
+    labEngine.gravity.y = labGravity;
+    labEngine.gravity.x = 0;
+    Matter.Events.on(labEngine, 'collisionStart', event => event.pairs.forEach(pair => {
+      const first = labObjects.get(pair.bodyA.id); const second = labObjects.get(pair.bodyB.id);
+      if (first && second) labMix(first, second);
+    }));
+    labCanvas.addEventListener('pointerdown', event => {
+      const rect = labCanvas.getBoundingClientRect();
+      const point = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+      const hits = Matter.Query.point([...labObjects.values()].map(object => object.body), point);
+      if (hits[0]) {
+        const object = labObjects.get(hits[0].id); labCanvas.setPointerCapture(event.pointerId);
+        const move = moveEvent => { Matter.Body.setPosition(object.body, { x: moveEvent.clientX - rect.left, y: moveEvent.clientY - rect.top }); Matter.Body.setVelocity(object.body, { x: 0, y: 0 }); };
+        const up = () => { labCanvas.removeEventListener('pointermove', move); labCanvas.removeEventListener('pointerup', up); };
+        labCanvas.addEventListener('pointermove', move); labCanvas.addEventListener('pointerup', up, { once: true });
+      }
+    });
+    document.querySelectorAll('[data-lab-material]').forEach(button => button.addEventListener('click', () => {
+      const rect = labCanvas.getBoundingClientRect(); labAdd(button.dataset.labMaterial, rect.width / 2, 45);
+    }));
+    document.getElementById('lab-pause').addEventListener('click', event => { labPaused = !labPaused; event.target.textContent = labPaused ? 'Resume' : 'Pause'; });
+    document.getElementById('lab-reset').addEventListener('click', labReset);
+    document.getElementById('lab-gravity').addEventListener('input', event => { labGravity = Number(event.target.value); labEngine.gravity.y = labGravity; });
+    document.getElementById('lab-heat').addEventListener('input', event => { labHeat = Number(event.target.value); });
+
+    function drawLab(now) {
+      const dt = Math.min(100, now - labLastTime); labLastTime = now;
+      if (!labPaused) {
+        labObjects.forEach(object => {
+          const nearBurner = object.body.position.x > labCanvas.width / 2 / (window.devicePixelRatio || 1) - 60 && object.body.position.x < labCanvas.width / 2 / (window.devicePixelRatio || 1) + 60 && object.body.position.y > labCanvas.height / (window.devicePixelRatio || 1) - 110;
+          if (nearBurner && labHeat > 0) { object.temperature = Math.min(object.material.boiling + 30, object.temperature + labHeat * dt * 0.0008); labEnergy += labHeat * dt * 0.001; }
+          else object.temperature += (20 - object.temperature) * dt * 0.00005;
+        });
+        Matter.Engine.update(labEngine, dt);
+      }
+      const context = labCanvas.getContext('2d'); const ratio = window.devicePixelRatio || 1; const w = labCanvas.width / ratio; const h = labCanvas.height / ratio;
+      context.setTransform(ratio, 0, 0, ratio, 0, 0); context.clearRect(0, 0, w, h);
+      context.fillStyle = '#dbe7ef'; context.fillRect(0, 0, w, h);
+      context.fillStyle = '#7f8c8d'; context.fillRect(w / 2 - 45, h - 35, 90, 18); context.fillStyle = labHeat ? '#e67e22' : '#34495e'; context.fillRect(w / 2 - 12, h - 58, 24, 24);
+      labObjects.forEach(object => { const p = object.body.position; const radius = object.body.circleRadius || 20; context.save(); context.translate(p.x, p.y); context.rotate(object.body.angle); context.fillStyle = object.material.color; context.beginPath(); context.arc(0, 0, radius, 0, Math.PI * 2); context.fill(); context.strokeStyle = '#2c3e50'; context.stroke(); context.fillStyle = '#17212b'; context.font = '10px sans-serif'; context.textAlign = 'center'; context.fillText(object.material.label, 0, 3); context.restore(); });
+      const temps = [...labObjects.values()].map(object => object.temperature); const average = temps.length ? temps.reduce((a, b) => a + b, 0) / temps.length : 20; const phValues = [...labObjects.values()].map(object => object.material.ph); const ph = phValues.length ? phValues.reduce((a, b) => a + b, 0) / phValues.length : 7;
+      document.getElementById('lab-readout').textContent = 'Temperature: ' + average.toFixed(1) + ' C\npH: ' + ph.toFixed(1) + '\nEnergy: ' + Math.round(labEnergy) + ' J';
+      requestAnimationFrame(drawLab);
+    }
+    requestAnimationFrame(() => { labResize(); labReset(); });
+    requestAnimationFrame(drawLab);
+    window.addEventListener('resize', () => requestAnimationFrame(labResize));
+
+    // Generate Periodic Table
+    const ptContainer = document.getElementById('periodic-table');
+
+    const ptColors = {
+      nonmetal: '#a0e6ff',
+      noble: '#ffc0cb',
+      alkali: '#ffb347',
+      alkaline: '#fdfd96',
+      metalloid: '#98fb98',
+      halogen: '#ffb6c1',
+      transition: '#d3d3d3',
+      postTransition: '#c1ffc1',
+      lanthanide: '#ffb3e6',
+      actinide: '#c2b280'
+    };
+
+    const elements = [{"n":1,"sym":"H","c":1,"r":1,"type":"nonmetal"},{"n":2,"sym":"He","c":18,"r":1,"type":"noble"},{"n":3,"sym":"Li","c":1,"r":2,"type":"alkali"},{"n":4,"sym":"Be","c":2,"r":2,"type":"alkaline"},{"n":5,"sym":"B","c":13,"r":2,"type":"metalloid"},{"n":6,"sym":"C","c":14,"r":2,"type":"nonmetal"},{"n":7,"sym":"N","c":15,"r":2,"type":"nonmetal"},{"n":8,"sym":"O","c":16,"r":2,"type":"nonmetal"},{"n":9,"sym":"F","c":17,"r":2,"type":"halogen"},{"n":10,"sym":"Ne","c":18,"r":2,"type":"noble"},{"n":11,"sym":"Na","c":1,"r":3,"type":"alkali"},{"n":12,"sym":"Mg","c":2,"r":3,"type":"alkaline"},{"n":13,"sym":"Al","c":13,"r":3,"type":"postTransition"},{"n":14,"sym":"Si","c":14,"r":3,"type":"metalloid"},{"n":15,"sym":"P","c":15,"r":3,"type":"nonmetal"},{"n":16,"sym":"S","c":16,"r":3,"type":"nonmetal"},{"n":17,"sym":"Cl","c":17,"r":3,"type":"halogen"},{"n":18,"sym":"Ar","c":18,"r":3,"type":"noble"},{"n":19,"sym":"K","c":1,"r":4,"type":"alkali"},{"n":20,"sym":"Ca","c":2,"r":4,"type":"alkaline"},{"n":21,"sym":"Sc","c":3,"r":4,"type":"transition"},{"n":22,"sym":"Ti","c":4,"r":4,"type":"transition"},{"n":23,"sym":"V","c":5,"r":4,"type":"transition"},{"n":24,"sym":"Cr","c":6,"r":4,"type":"transition"},{"n":25,"sym":"Mn","c":7,"r":4,"type":"transition"},{"n":26,"sym":"Fe","c":8,"r":4,"type":"transition"},{"n":27,"sym":"Co","c":9,"r":4,"type":"transition"},{"n":28,"sym":"Ni","c":10,"r":4,"type":"transition"},{"n":29,"sym":"Cu","c":11,"r":4,"type":"transition"},{"n":30,"sym":"Zn","c":12,"r":4,"type":"transition"},{"n":31,"sym":"Ga","c":13,"r":4,"type":"postTransition"},{"n":32,"sym":"Ge","c":14,"r":4,"type":"metalloid"},{"n":33,"sym":"As","c":15,"r":4,"type":"metalloid"},{"n":34,"sym":"Se","c":16,"r":4,"type":"nonmetal"},{"n":35,"sym":"Br","c":17,"r":4,"type":"halogen"},{"n":36,"sym":"Kr","c":18,"r":4,"type":"noble"},{"n":37,"sym":"Rb","c":1,"r":5,"type":"alkali"},{"n":38,"sym":"Sr","c":2,"r":5,"type":"alkaline"},{"n":39,"sym":"Y","c":3,"r":5,"type":"transition"},{"n":40,"sym":"Zr","c":4,"r":5,"type":"transition"},{"n":41,"sym":"Nb","c":5,"r":5,"type":"transition"},{"n":42,"sym":"Mo","c":6,"r":5,"type":"transition"},{"n":43,"sym":"Tc","c":7,"r":5,"type":"transition"},{"n":44,"sym":"Ru","c":8,"r":5,"type":"transition"},{"n":45,"sym":"Rh","c":9,"r":5,"type":"transition"},{"n":46,"sym":"Pd","c":10,"r":5,"type":"transition"},{"n":47,"sym":"Ag","c":11,"r":5,"type":"transition"},{"n":48,"sym":"Cd","c":12,"r":5,"type":"transition"},{"n":49,"sym":"In","c":13,"r":5,"type":"postTransition"},{"n":50,"sym":"Sn","c":14,"r":5,"type":"postTransition"},{"n":51,"sym":"Sb","c":15,"r":5,"type":"metalloid"},{"n":52,"sym":"Te","c":16,"r":5,"type":"metalloid"},{"n":53,"sym":"I","c":17,"r":5,"type":"halogen"},{"n":54,"sym":"Xe","c":18,"r":5,"type":"noble"},{"n":55,"sym":"Cs","c":1,"r":6,"type":"alkali"},{"n":56,"sym":"Ba","c":2,"r":6,"type":"alkaline"},{"n":72,"sym":"Hf","c":4,"r":6,"type":"transition"},{"n":73,"sym":"Ta","c":5,"r":6,"type":"transition"},{"n":74,"sym":"W","c":6,"r":6,"type":"transition"},{"n":75,"sym":"Re","c":7,"r":6,"type":"transition"},{"n":76,"sym":"Os","c":8,"r":6,"type":"transition"},{"n":77,"sym":"Ir","c":9,"r":6,"type":"transition"},{"n":78,"sym":"Pt","c":10,"r":6,"type":"transition"},{"n":79,"sym":"Au","c":11,"r":6,"type":"transition"},{"n":80,"sym":"Hg","c":12,"r":6,"type":"transition"},{"n":81,"sym":"Tl","c":13,"r":6,"type":"postTransition"},{"n":82,"sym":"Pb","c":14,"r":6,"type":"postTransition"},{"n":83,"sym":"Bi","c":15,"r":6,"type":"postTransition"},{"n":84,"sym":"Po","c":16,"r":6,"type":"postTransition"},{"n":85,"sym":"At","c":17,"r":6,"type":"halogen"},{"n":86,"sym":"Rn","c":18,"r":6,"type":"noble"},{"n":87,"sym":"Fr","c":1,"r":7,"type":"alkali"},{"n":88,"sym":"Ra","c":2,"r":7,"type":"alkaline"},{"n":104,"sym":"Rf","c":4,"r":7,"type":"transition"},{"n":105,"sym":"Db","c":5,"r":7,"type":"transition"},{"n":106,"sym":"Sg","c":6,"r":7,"type":"transition"},{"n":107,"sym":"Bh","c":7,"r":7,"type":"transition"},{"n":108,"sym":"Hs","c":8,"r":7,"type":"transition"},{"n":109,"sym":"Mt","c":9,"r":7,"type":"transition"},{"n":110,"sym":"Ds","c":10,"r":7,"type":"transition"},{"n":111,"sym":"Rg","c":11,"r":7,"type":"transition"},{"n":112,"sym":"Cn","c":12,"r":7,"type":"transition"},{"n":113,"sym":"Nh","c":13,"r":7,"type":"postTransition"},{"n":114,"sym":"Fl","c":14,"r":7,"type":"postTransition"},{"n":115,"sym":"Mc","c":15,"r":7,"type":"postTransition"},{"n":116,"sym":"Lv","c":16,"r":7,"type":"postTransition"},{"n":117,"sym":"Ts","c":17,"r":7,"type":"halogen"},{"n":118,"sym":"Og","c":18,"r":7,"type":"noble"},{"n":57,"sym":"La","c":3,"r":9,"type":"lanthanide"},{"n":58,"sym":"Ce","c":4,"r":9,"type":"lanthanide"},{"n":59,"sym":"Pr","c":5,"r":9,"type":"lanthanide"},{"n":60,"sym":"Nd","c":6,"r":9,"type":"lanthanide"},{"n":61,"sym":"Pm","c":7,"r":9,"type":"lanthanide"},{"n":62,"sym":"Sm","c":8,"r":9,"type":"lanthanide"},{"n":63,"sym":"Eu","c":9,"r":9,"type":"lanthanide"},{"n":64,"sym":"Gd","c":10,"r":9,"type":"lanthanide"},{"n":65,"sym":"Tb","c":11,"r":9,"type":"lanthanide"},{"n":66,"sym":"Dy","c":12,"r":9,"type":"lanthanide"},{"n":67,"sym":"Ho","c":13,"r":9,"type":"lanthanide"},{"n":68,"sym":"Er","c":14,"r":9,"type":"lanthanide"},{"n":69,"sym":"Tm","c":15,"r":9,"type":"lanthanide"},{"n":70,"sym":"Yb","c":16,"r":9,"type":"lanthanide"},{"n":71,"sym":"Lu","c":17,"r":9,"type":"lanthanide"},{"n":89,"sym":"Ac","c":3,"r":10,"type":"actinide"},{"n":90,"sym":"Th","c":4,"r":10,"type":"actinide"},{"n":91,"sym":"Pa","c":5,"r":10,"type":"actinide"},{"n":92,"sym":"U","c":6,"r":10,"type":"actinide"},{"n":93,"sym":"Np","c":7,"r":10,"type":"actinide"},{"n":94,"sym":"Pu","c":8,"r":10,"type":"actinide"},{"n":95,"sym":"Am","c":9,"r":10,"type":"actinide"},{"n":96,"sym":"Cm","c":10,"r":10,"type":"actinide"},{"n":97,"sym":"Bk","c":11,"r":10,"type":"actinide"},{"n":98,"sym":"Cf","c":12,"r":10,"type":"actinide"},{"n":99,"sym":"Es","c":13,"r":10,"type":"actinide"},{"n":100,"sym":"Fm","c":14,"r":10,"type":"actinide"},{"n":101,"sym":"Md","c":15,"r":10,"type":"actinide"},{"n":102,"sym":"No","c":16,"r":10,"type":"actinide"},{"n":103,"sym":"Lr","c":17,"r":10,"type":"actinide"}]
+;
+
+    function getContrastYIQ(hexcolor){
+        if (hexcolor.startsWith('#')) hexcolor = hexcolor.slice(1);
+        var r = parseInt(hexcolor.substr(0,2),16);
+        var g = parseInt(hexcolor.substr(2,2),16);
+        var b = parseInt(hexcolor.substr(4,2),16);
+        var yiq = ((r*299)+(g*587)+(b*114))/1000;
+        return (yiq >= 128) ? 'black' : 'white';
+    }
+
+      const surfacePalettes = {
+        metal: ['#f4f7f8', '#8b969d', '#dce3e6', '#68747b'],
+        transition: ['#f8fafb', '#7c8790', '#e6ecef', '#526069'],
+        postTransition: ['#f2f4f5', '#89969c', '#d8e0e3', '#69777d'],
+        alkali: ['#fff5d6', '#c99624', '#f8df81', '#8c6412'],
+        alkaline: ['#fff9df', '#b9a45d', '#eee0a0', '#817235'],
+        metalloid: ['#f1f4f5', '#738187', '#d4dde0', '#46545a'],
+        nonmetal: ['#f7fbff', '#8ca3ad', '#d9edf4', '#58717d'],
+        noble: ['#fffaff', '#9e88a8', '#eadff0', '#66546f'],
+        halogen: ['#fff7fa', '#b77c8b', '#efd0d8', '#764652'],
+        lanthanide: ['#fff8ec', '#a88a57', '#ead4a6', '#6d542c'],
+        actinide: ['#f5f1eb', '#786e63', '#d8c7af', '#493f36']
+      };
+
+      const specialSurfaces = {
+        6: ['#ffffff', '#202020', '#a9a9a9', '#050505'],
+        13: ['#ffffff', '#9da7ad', '#e8edf0', '#5f6a70'],
+        26: ['#fffefa', '#6e7478', '#d4d7d8', '#3e4447'],
+        29: ['#fff4df', '#b87333', '#e8a15e', '#70401f'],
+        47: ['#ffffff', '#7b8790', '#edf1f3', '#465158'],
+        74: ['#ffffff', '#62676a', '#d2d4d5', '#35393b'],
+        79: ['#fff8c7', '#c9a227', '#f4d675', '#795b0a'],
+        80: ['#f7fbff', '#8d969d', '#e1e8ec', '#505a60'],
+        92: ['#fff7b0', '#5c604c', '#c8c77c', '#373a2c']
+      };
+
+      function getSurfaceGradient(el) {
+        const colors = specialSurfaces[el.n] || surfacePalettes[el.type] || surfacePalettes.metal;
+        return `linear-gradient(135deg, ${colors[0]} 0%, ${colors[1]} 28%, ${colors[2]} 54%, ${colors[3]} 100%)`;
+      }
+
+      function getSurfaceBaseColor(el) {
+        const colors = specialSurfaces[el.n] || surfacePalettes[el.type] || surfacePalettes.metal;
+        return colors[1];
+      }
+
+    for (let r = 1; r <= 10; r++) {
+      for (let c = 1; c <= 18; c++) {
+        const el = elements.find(e => e.r === r && e.c === c);
+        const cell = document.createElement('div');
+        if (el) {
+          const bgColor = ptColors[el.type] || '#fff';
+          cell.className = 'pt-element';
+          cell.style.backgroundColor = bgColor;
+          cell.innerHTML = '<span class="pt-number">' + el.n + '</span><span class="pt-symbol">' + el.sym + '</span>';
+          cell.title = 'Atomic Number: ' + el.n;
+
+          cell.onclick = () => {
+            const surfaceGradient = getSurfaceGradient(el);
+            const surfaceBaseColor = getSurfaceBaseColor(el);
+            document.documentElement.style.setProperty('--theme-color', surfaceGradient);
+            document.documentElement.style.setProperty('--theme-text', getContrastYIQ(surfaceBaseColor));
+            // Send element data to main process for atom mode
+            window.browserAPI.selectElement(el.n, surfaceBaseColor, surfaceGradient, getContrastYIQ(surfaceBaseColor));
+          };
+        } else {
+          cell.className = 'pt-empty';
+        }
+        ptContainer.appendChild(cell);
+      }
+    }
+
+    document.getElementById('plugins-btn').addEventListener('click', () => {
+      document.getElementById('plugins-modal').style.display = 'block';
+      document.getElementById('plugins-overlay').style.display = 'block';
+    });
+
+    // Notify main process that the UI is ready
+    if (!isSettingsOverlay) window.browserAPI.appReady();
+  </script>
+</body>
+</html>
