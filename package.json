@@ -10,7 +10,7 @@
     "build:win": "electron-builder --win nsis portable --x64",
     "build:linux": "electron-builder --linux AppImage",
     "build:all": "npm run build:mac && npm run build:win && npm run build:linux",
-    "check": "node --check main.js && node --check preload.js && node --check overlay.js && node --check overlay-preload.js && node --check state-store.js",
+    "check": "node --check main.js && node --check preload.js && node --check overlay.js && node --check overlay-preload.js && node --check state-store.js && node --check ai-strip.js",
     "test": "node --test test",
     "verify:mac": "codesign --verify --deep --strict --verbose=2 dist/mac-arm64/Elemental.app && spctl --assess --type execute --verbose=2 dist/mac-arm64/Elemental.app",
     "notarize:mac": "test -n \"$APPLE_ID\" && test -n \"$APPLE_TEAM_ID\" && test -n \"$APPLE_APP_PASSWORD\" && xcrun notarytool submit dist/Elemental-1.1.0-arm64.dmg --apple-id \"$APPLE_ID\" --team-id \"$APPLE_TEAM_ID\" --password \"$APPLE_APP_PASSWORD\" --wait"
@@ -42,12 +42,12 @@
     },
     "win": {
       "target": ["nsis", "portable"],
-      "icon": "build/elemental-windows.png"
+      "icon": "build/elemental-windows.ico"
     },
     "linux": {
       "target": ["AppImage"],
       "category": "Utility",
-      "icon": "build/elemental-windows.png"
+      "icon": "build/elemental-linux.png"
     },
     "nsis": {
       "oneClick": true,

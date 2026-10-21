@@ -9,7 +9,8 @@ if (process.platform === 'darwin') {
 }
 const { app, BrowserWindow, BrowserView, ipcMain, Menu, dialog, globalShortcut, nativeImage, nativeTheme } = require('electron');
 const path = require('path');
-const { createStateStore } = require('./state-store');
+const { createStateStore, VALID_AI_MODES } = require('./state-store');
+const { buildAiStripScript } = require('./ai-strip');
 
 const isPreBetaBuild = process.execPath.includes('Elemental Pre-BETA.app');
 if (isPreBetaBuild) {
@@ -94,6 +95,24 @@ function applySettingsToView(view, settings) {
     });
   }
 
+  // AI strip — re-applied on every settings change. The script is idempotent:
+  // it creates/replaces a single <style id="__elemental_ai_strip__"> element.
+  const aiMode = settings.aiMode || 'on';
+  const aiScript = buildAiStripScript(aiMode);
+  if (aiScript) {
+    view.webContents.executeJavaScript(aiScript).catch(err => {
+      console.warn('AI strip injection failed:', err.message);
+    });
+  } else if (view.webContents && !view.webContents.isDestroyed()) {
+    // aiMode === 'on' — remove any previously injected strip style.
+    view.webContents.executeJavaScript(`
+      (function(){
+        var s = document.getElementById('__elemental_ai_strip__');
+        if (s) s.remove();
+      })();
+    `).catch(() => {});
+  }
+
   const blackHoleCode = require('fs').readFileSync(path.join(__dirname, 'inject-black-hole.js'), 'utf8');
   const matterJsCode = require('fs').readFileSync(path.join(__dirname, 'matter.min.js'), 'utf8');
   view.webContents.executeJavaScript(blackHoleCode
@@ -143,7 +162,7 @@ if (isGoose) {
     '.mud-footprint { position:fixed;width:12px;height:10px;background:#5c4033;border-radius:50%;opacity:0.7;pointer-events:none;z-index:2147483645; }',
     '.honk-text { position:fixed;color:#000;font-weight:bold;font-size:24px;pointer-events:none;z-index:2147483647;animation:honk-fade 2s forwards; }',
     '@keyframes honk-fade { 0%{opacity:1;transform:translateY(0);} 100%{opacity:0;transform:translateY(-50px);} }'
-  ].join('\\n');
+  ].join('\n');
 } else {
   catStyle.textContent = [
     '@keyframes cat-front-run { 0%,100%{transform:rotate(-30deg)} 50%{transform:rotate(30deg)} }',
@@ -171,7 +190,7 @@ if (isGoose) {
     '#cat-fr { left:18px;top:26px; }',
     '#cat-bl { left:30px;top:26px; }',
     '#cat-br { left:36px;top:26px; }'
-  ].join('\\n');
+  ].join('\n');
 }
 
 document.head.appendChild(catStyle);
@@ -310,14 +329,14 @@ function updateViewBounds(state) {
     return;
   }
   const chromeHeight = isPreBetaBuild ? 144 : 114;
-  const bottomMargin = state.settings.science ? 280 : 0;
-  state.views[state.activeTabId].setBounds({ x: 0, y: chromeHeight, width, height: height - chromeHeight - bottomMargin });
+  state.views[state.activeTabId].setBounds({ x: 0, y: chromeHeight, width, height: height - chromeHeight });
 }
 
 function isAllowedUrl(value) {
   try {
     const url = new URL(value);
-    return ['http:', 'https:'].includes(url.protocol) || (url.protocol === 'http:' && /^(localhost|127\.0\.0\.1)$/.test(url.hostname));
+    if (url.protocol === 'http:') return /^(localhost|127\.0\.0\.1)$/.test(url.hostname);
+    return url.protocol === 'https:';
   } catch (_) {
     return false;
   }
@@ -335,6 +354,7 @@ function createTab(state, initialUrl = 'https://www.google.com') {
   view.webContents.on('did-navigate', (_event, url) => recordNavigation(url));
   view.webContents.on('did-navigate-in-page', (_event, url) => recordNavigation(url));
   view.webContents.on('page-title-updated', (_event, title) => sendToRenderer(state, 'title-changed', id, title));
+  view.webContents.on('dom-ready', () => applySettingsToView(view, state.settings));
   view.webContents.on('did-finish-load', () => applySettingsToView(view, state.settings));
   view.webContents.on('page-favicon-updated', (_event, favicons) => favicons[0] && sendToRenderer(state, 'favicon-changed', id, favicons[0]));
   view.webContents.on('did-start-loading', () => sendToRenderer(state, 'loading-state', id, true));
@@ -573,7 +593,7 @@ function registerWindowIpc() {
   ipcMain.on('toggle-setting', (event, setting, value) => {
     const state = getStateForSender(event);
     const ownerState = state?.owner || state;
-    const allowed = ['papyrus', 'comicsans', 'cat', 'goose', 'atom', 'blackhole', 'science', 'zerogravity'];
+    const allowed = ['papyrus', 'comicsans', 'cat', 'goose', 'atom', 'blackhole', 'zerogravity'];
     if (!ownerState || !allowed.includes(setting) || typeof value !== 'boolean') return;
     ownerState.settings[setting] = value;
     if (setting === 'papyrus' && value) ownerState.settings.comicsans = false;
@@ -581,12 +601,24 @@ function registerWindowIpc() {
     if (setting === 'cat' && !value) ownerState.settings.goose = false;
     if (setting === 'goose' && value) ownerState.settings.cat = true;
     if (setting === 'blackhole' && value && ownerState.settingsOverlay && !ownerState.settingsOverlay.isDestroyed()) ownerState.settingsOverlay.close();
-    Object.values(ownerState.views).forEach(view => setting === 'papyrus' || setting === 'comicsans' ? view.webContents.reload() : setting !== 'science' && applySettingsToView(view, ownerState.settings));
+    Object.values(ownerState.views).forEach(view => setting === 'papyrus' || setting === 'comicsans' ? view.webContents.reload() : applySettingsToView(view, ownerState.settings));
     if (setting === 'atom' && ownerState.overlayWindow && !ownerState.overlayWindow.isDestroyed()) ownerState.overlayWindow.webContents.send('toggle-atom', ownerState.settings.atom, ownerState.settings.selectedElement);
-    if (setting === 'science') {
-      updateViewBounds(ownerState);
-      if (state.isSettingsOverlay) sendToRenderer(ownerState, 'science-mode-changed', value);
+  });
+
+  ipcMain.on('set-ai-mode', (event, mode) => {
+    const state = getStateForSender(event);
+    const ownerState = state?.owner || state;
+    if (!ownerState || !VALID_AI_MODES.includes(mode)) return;
+    if (ownerState.settings.aiMode === mode) return;
+    ownerState.settings.aiMode = mode;
+    savePersistentState();
+    sendToRenderer(ownerState, 'ai-mode-updated', mode);
+    if (ownerState.settingsOverlay && !ownerState.settingsOverlay.isDestroyed()) {
+      ownerState.settingsOverlay.webContents.send('ai-mode-updated', mode);
     }
+    // Re-apply settings to all views in this window. The injection is
+    // idempotent, so existing tabs pick up the change without a reload.
+    Object.values(ownerState.views).forEach(view => applySettingsToView(view, ownerState.settings));
   });
 
   ipcMain.on('toggle-settings-panel', (event, isOpen) => {

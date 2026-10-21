@@ -8,12 +8,34 @@
       --theme-color: #f6f6f6;
       --theme-text: #000;
       --tab-bar-bg: rgba(0, 0, 0, 0.08); /* Darkens the theme slightly for the tab bar */
+      --title-bar-height: 28px;
+      --tab-bar-height: 38px;
+      --toolbar-height: 48px;
+      --bookmarks-bar-height: 30px;
+      --chrome-height: calc(var(--title-bar-height) + var(--tab-bar-height) + var(--toolbar-height));
+      --accent: #1a73e8;
+      --accent-hover: #1765c7;
+      --border-soft: rgba(0, 0, 0, 0.08);
+      --border-mid: rgba(0, 0, 0, 0.18);
+    }
+    body.prebeta-mode {
+      --chrome-height: calc(var(--title-bar-height) + var(--tab-bar-height) + var(--toolbar-height) + var(--bookmarks-bar-height));
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --theme-color: #2a2a2a;
+        --theme-text: #ececec;
+        --tab-bar-bg: rgba(0, 0, 0, 0.35);
+        --border-soft: rgba(255, 255, 255, 0.08);
+        --border-mid: rgba(255, 255, 255, 0.18);
+      }
     }
     body {
       margin: 0;
       padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       background: var(--theme-color);
+      color: var(--theme-text);
       border-bottom: 1px solid #ccc;
       transition: background-color 0.3s ease;
       display: flex;
@@ -21,11 +43,24 @@
       height: 100vh;
       overflow: hidden;
     }
+    /* Visible focus ring for keyboard users */
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    [tabindex]:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    /* Hide focus ring for mouse users */
+    button:focus:not(:focus-visible),
+    input:focus:not(:focus-visible),
+    select:focus:not(:focus-visible) {
+      outline: none;
+    }
     body.page-fullscreen .title-bar,
     body.page-fullscreen .tab-bar,
     body.page-fullscreen .toolbar,
-    body.page-fullscreen #settings-panel,
-    body.page-fullscreen #science-lab { display: none !important; }
+    body.page-fullscreen #settings-panel { display: none !important; }
     body.mac-window.window-inactive:not(.page-fullscreen) .title-bar::before {
       content: '';
       position: absolute;
@@ -41,7 +76,7 @@
 
     /* Title Bar */
     .title-bar {
-      height: 28px;
+      height: var(--title-bar-height);
       width: 100%;
       background: var(--theme-color);
       -webkit-app-region: drag;
@@ -55,7 +90,7 @@
       background: var(--theme-color);
       position: relative;
       align-items: center;
-      height: 38px;
+      height: var(--tab-bar-height);
       padding-left: 8px;
       padding-right: 12px;
     }
@@ -74,11 +109,18 @@
       flex: 1;
       align-items: center;
       height: 100%;
-      overflow: hidden;
+      overflow-x: auto;
+      overflow-y: hidden;
       min-width: 0;
       gap: 2px;
       z-index: 1;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border-mid) transparent;
     }
+    #tabs-container::-webkit-scrollbar { height: 4px; }
+    #tabs-container::-webkit-scrollbar-track { background: transparent; }
+    #tabs-container::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 2px; }
+    #tabs-container::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.3); }
 
     .tab {
       display: flex;
@@ -259,7 +301,7 @@
     .toolbar {
       display: flex;
       align-items: center;
-      height: 48px;
+      height: var(--toolbar-height);
       padding: 0 8px;
       box-sizing: border-box;
       background: var(--theme-color);
@@ -285,15 +327,66 @@
       font-size: 18px;
       cursor: pointer;
       color: var(--theme-text);
-      transition: background 0.2s ease;
+      transition: background 0.15s ease, transform 0.1s ease;
       opacity: 0.8;
     }
     button.icon-btn:hover {
       background: rgba(0,0,0,0.08);
       opacity: 1;
     }
+    @media (prefers-color-scheme: dark) {
+      button.icon-btn:hover { background: rgba(255,255,255,0.1); }
+    }
     button.icon-btn:active {
       background: rgba(0,0,0,0.15);
+      transform: scale(0.94);
+    }
+    button.icon-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+    .ai-toolbar-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 28px;
+      padding: 0 10px;
+      border-radius: 14px;
+      border: 1px solid var(--border-mid);
+      background: rgba(127, 127, 127, 0.12);
+      color: var(--theme-text);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.15s ease;
+      margin-right: 4px;
+    }
+    .ai-toolbar-btn:hover {
+      background: rgba(127, 127, 127, 0.22);
+      transform: translateY(-1px);
+    }
+    .ai-toolbar-btn:active {
+      transform: translateY(0) scale(0.97);
+    }
+    .ai-toolbar-btn .ai-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #10b981;
+      transition: background 0.2s ease;
+    }
+    .ai-toolbar-btn.mode-search-off .ai-dot {
+      background: #f59e0b;
+    }
+    .ai-toolbar-btn.mode-all-off .ai-dot {
+      background: #ef4444;
+    }
+    .ai-toolbar-badge {
+      font-size: 11px;
+      font-weight: 500;
+      opacity: 0.85;
     }
 
     .address-bar {
@@ -317,21 +410,31 @@
       height: 34px;
       border: 1px solid transparent;
       transition: background 0.3s, box-shadow 0.3s;
+      color: #202124;
+    }
+    @media (prefers-color-scheme: dark) {
+      .search-container { background: #202124; color: var(--theme-text); }
     }
     .search-container:focus-within {
       background: #fff;
       box-shadow: 0 0 0 1px #ccc, 0 2px 6px rgba(0,0,0,0.05);
+    }
+    @media (prefers-color-scheme: dark) {
+      .search-container:focus-within {
+        background: #353535;
+        box-shadow: 0 0 0 1px #555, 0 2px 6px rgba(0,0,0,0.3);
+      }
     }
 
     .bookmarks-bar {
       display: flex;
       align-items: center;
       gap: 4px;
-      height: 30px;
+      height: var(--bookmarks-bar-height);
       padding: 0 12px;
       background: var(--theme-color);
-      border-top: 1px solid rgba(0,0,0,0.08);
-      border-bottom: 1px solid rgba(0,0,0,0.12);
+      border-top: 1px solid var(--border-soft);
+      border-bottom: 1px solid var(--border-mid);
       color: var(--theme-text);
       overflow: hidden;
     }
@@ -344,8 +447,14 @@
       font-size: 11px;
       cursor: pointer;
       white-space: nowrap;
+      transition: background 0.15s ease, color 0.15s ease;
     }
-    .bookmark-link:hover { background: rgba(0,0,0,0.08); }
+    .bookmark-link:hover { background: rgba(0,0,0,0.08); color: var(--accent); }
+    .bookmark-link:active { background: rgba(0,0,0,0.15); }
+    @media (prefers-color-scheme: dark) {
+      .bookmark-link:hover { background: rgba(255,255,255,0.1); color: #6ea8ff; }
+      .bookmark-link:active { background: rgba(255,255,255,0.18); }
+    }
     .chrome-action { font-size: 16px !important; }
     body:not(.prebeta-mode) .bookmarks-bar,
     body:not(.prebeta-mode) .chrome-action { display: none !important; }
@@ -361,9 +470,15 @@
       font-size: 13px;
       color: #5f6368;
       cursor: pointer;
-      padding-right: 8px;
+      padding: 2px 8px;
       margin-right: 8px;
-      border-right: 1px solid #dadce0;
+      border-right: 1px solid var(--border-mid);
+      transition: color 0.15s ease;
+    }
+    .search-container select:hover { color: var(--accent); }
+    @media (prefers-color-scheme: dark) {
+      .search-container select { color: #bdc1c6; }
+      .search-container select:hover { color: #6ea8ff; }
     }
 
     input {
@@ -372,8 +487,9 @@
       border: none;
       outline: none;
       font-size: 14px;
-      color: #202124;
+      color: var(--theme-text);
     }
+    input::placeholder { color: rgba(127,127,127,0.7); }
 
     .right-buttons {
       display: flex;
@@ -383,18 +499,24 @@
     /* Settings Panel */
     .settings-panel {
       position: absolute;
-      top: 118px;
+      top: calc(var(--chrome-height) + 4px);
       right: 10px;
       width: 500px;
-      max-height: 600px;
+      max-height: calc(100vh - var(--chrome-height) - 24px);
       overflow-y: auto;
-      background: #fff;
-      border: 1px solid #ccc;
+      background: var(--theme-color);
+      color: var(--theme-text);
+      border: 1px solid var(--border-mid);
       border-radius: 12px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
       padding: 20px;
       display: none;
       z-index: 1000;
+      animation: settingsSlideIn 0.18s ease-out;
+    }
+    @keyframes settingsSlideIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     .settings-overlay-mode {
       background: transparent;
@@ -416,7 +538,154 @@
       margin-top: 0;
       margin-bottom: 20px;
       font-size: 18px;
-      color: #000;
+      color: inherit;
+    }
+    .settings-section-title {
+      margin-top: 22px;
+      margin-bottom: 12px;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--theme-text);
+      opacity: 0.7;
+      font-weight: 600;
+    }
+    .settings-section-title:first-of-type { margin-top: 8px; }
+    .settings-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .settings-header h3 { margin-bottom: 0; }
+    .settings-close-btn {
+      font-size: 20px;
+      line-height: 1;
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+      color: inherit;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s ease;
+    }
+    .settings-close-btn:hover { background: rgba(0,0,0,0.08); }
+    .settings-close-btn:active { background: rgba(0,0,0,0.15); }
+    .settings-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 18px;
+    }
+    .settings-action-btn {
+      padding: 6px 12px;
+      border: 1px solid var(--border-mid);
+      background: rgba(127,127,127,0.1);
+      color: inherit;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .settings-action-btn:hover {
+      background: rgba(127,127,127,0.18);
+      border-color: var(--accent);
+    }
+    .settings-action-btn:active { background: rgba(127,127,127,0.25); }
+    @media (prefers-color-scheme: dark) {
+      .settings-close-btn:hover { background: rgba(255,255,255,0.1); }
+      .settings-close-btn:active { background: rgba(255,255,255,0.18); }
+    }
+
+    /* AI mode 3-position switch */
+    .ai-mode-row {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .ai-mode-labels {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+    .ai-mode-title { font-size: 14px; font-weight: 500; }
+    .ai-mode-current {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      opacity: 0.6;
+      font-weight: 600;
+    }
+    .ai-mode-help {
+      margin: -4px 0 18px;
+      font-size: 12px;
+      opacity: 0.65;
+      line-height: 1.4;
+    }
+    .tri-switch {
+      position: relative;
+      display: flex;
+      width: 100%;
+      max-width: 320px;
+      height: 32px;
+      border-radius: 16px;
+      background: rgba(127,127,127,0.15);
+      border: 1px solid var(--border-mid);
+      padding: 3px;
+      box-sizing: border-box;
+    }
+    .tri-switch input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+      pointer-events: none;
+    }
+    .tri-switch-option {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--theme-text);
+      opacity: 0.7;
+      cursor: pointer;
+      border-radius: 13px;
+      transition: opacity 0.18s ease, color 0.18s ease;
+      z-index: 1;
+      user-select: none;
+    }
+    .tri-switch-option:hover { opacity: 1; }
+    .tri-switch input[type="radio"]:checked + .tri-switch-option {
+      opacity: 1;
+      color: #fff;
+    }
+    .tri-switch-thumb {
+      position: absolute;
+      top: 3px;
+      bottom: 3px;
+      left: 3px;
+      width: calc((100% - 6px) / 3);
+      background: var(--accent);
+      border-radius: 13px;
+      transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .tri-switch input[value="on"]:checked ~ .tri-switch-thumb { transform: translateX(0); }
+    .tri-switch input[value="search-off"]:checked ~ .tri-switch-thumb { transform: translateX(100%); }
+    .tri-switch input[value="all-off"]:checked ~ .tri-switch-thumb { transform: translateX(200%); }
+    .tri-switch input:focus-visible + .tri-switch-option {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    @media (prefers-color-scheme: dark) {
+      .tri-switch { background: rgba(255,255,255,0.08); }
     }
     .setting-item {
       display: flex;
@@ -424,7 +693,7 @@
       align-items: center;
       margin-bottom: 15px;
       font-size: 14px;
-      color: #000;
+      color: inherit;
     }
     .settings-divider {
       height: 1px;
@@ -451,7 +720,7 @@
       font-weight: bold;
       cursor: pointer;
       background: #f9f9f9;
-      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease, z-index 0s;
+      transition: transform 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.18s ease, z-index 0s;
       position: relative;
       color: #000;
     }
@@ -459,6 +728,12 @@
       transform: scale(1.35);
       box-shadow: 0 4px 15px rgba(0,0,0,0.3);
       z-index: 10;
+    }
+    .pt-element:active { transform: scale(1.25); }
+    .pt-element:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+      box-shadow: 0 0 0 3px rgba(26,115,232,0.3);
     }
     .pt-empty {
       border: none;
@@ -536,24 +811,36 @@
       bottom: 0;
       right: 0;
       left: 0;
-      background: #f1f3f4;
-      border-top: 1px solid #ccc;
+      background: var(--theme-color);
+      border-top: 1px solid var(--border-mid);
       padding: 10px;
       z-index: 9000;
       display: none;
       align-items: center;
       gap: 10px;
       font-size: 13px;
-      color: #333;
+      color: var(--theme-text);
+      animation: downloadsSlide 0.22s ease-out;
+    }
+    @keyframes downloadsSlide {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     .download-item {
-      background: #fff;
-      border: 1px solid #ddd;
+      background: rgba(255,255,255,0.85);
+      border: 1px solid var(--border-mid);
       border-radius: 4px;
       padding: 6px 12px;
       display: flex;
       align-items: center;
       gap: 8px;
+      color: #1a1a1a;
+    }
+    @media (prefers-color-scheme: dark) {
+      .download-item {
+        background: rgba(0,0,0,0.35);
+        color: var(--theme-text);
+      }
     }
 
     /* Plugins Modal */
@@ -562,12 +849,15 @@
       position: fixed;
       top: 50%; left: 50%;
       transform: translate(-50%, -50%);
-      background: #fff;
+      background: var(--theme-color);
+      color: var(--theme-text);
       padding: 20px;
       border-radius: 8px;
+      border: 1px solid var(--border-mid);
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       z-index: 2000;
       width: 300px;
+      animation: settingsSlideIn 0.18s ease-out;
     }
     .plugins-modal h2 { margin-top: 0; }
     .plugin-item {
@@ -595,6 +885,7 @@
 
     /* Science Lab */
     #science-lab {
+      display: none !important;
       position: fixed;
       bottom: 0;
       left: 0;
@@ -758,6 +1049,11 @@
       </div>
     </div>
     <div class="right-buttons">
+      <button class="ai-toolbar-btn mode-on" id="ai-mode-btn" title="AI Mode: On (Click to cycle)" aria-label="AI Mode">
+        <span class="ai-dot" aria-hidden="true"></span>
+        <span>AI</span>
+        <span class="ai-toolbar-badge" id="ai-toolbar-badge">On</span>
+      </button>
       <button class="icon-btn chrome-action" title="Extensions" aria-label="Extensions">puzzle</button>
       <button class="icon-btn chrome-action" title="Profile" aria-label="Profile">●</button>
       <button class="icon-btn" id="settings-btn" title="Settings">⋮</button>
@@ -772,13 +1068,33 @@
 
   <!-- Settings Panel -->
   <div class="settings-panel" id="settings-panel">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
+    <div class="settings-header">
       <h3>Settings</h3>
-      <button id="close-settings-btn" title="Close settings" style="font-size:20px; border:0; background:transparent; cursor:pointer;">&times;</button>
+      <button id="close-settings-btn" title="Close settings" aria-label="Close settings" class="settings-close-btn">&times;</button>
     </div>
-    <button id="import-bookmarks-btn" style="margin-bottom:10px; padding:6px; cursor:pointer;">Import Chrome Bookmarks</button>
-    <button id="view-history-btn" style="margin-bottom:10px; padding:6px; cursor:pointer;">View History</button>
-    <button id="plugins-btn" style="margin-bottom:20px; padding:6px; cursor:pointer;">Plugins / Extensions</button>
+    <div class="settings-toolbar">
+      <button id="import-bookmarks-btn" class="settings-action-btn">Import Chrome Bookmarks</button>
+      <button id="view-history-btn" class="settings-action-btn">View History</button>
+      <button id="plugins-btn" class="settings-action-btn">Plugins / Extensions</button>
+    </div>
+    <h3 class="settings-section-title">AI Search</h3>
+    <div class="setting-item ai-mode-row">
+      <div class="ai-mode-labels">
+        <span class="ai-mode-title">AI Mode</span>
+        <span class="ai-mode-current" id="ai-mode-current">On</span>
+      </div>
+      <div class="tri-switch" role="radiogroup" aria-label="AI mode">
+        <input type="radio" name="ai-mode" id="ai-mode-on" value="on" checked>
+        <label for="ai-mode-on" class="tri-switch-option" data-value="on" title="On: normal browsing, AI features visible">On</label>
+        <input type="radio" name="ai-mode" id="ai-mode-search-off" value="search-off">
+        <label for="ai-mode-search-off" class="tri-switch-option" data-value="search-off" title="Off: Google results without AI Overview or AI Mode">Off</label>
+        <input type="radio" name="ai-mode" id="ai-mode-all-off" value="all-off">
+        <label for="ai-mode-all-off" class="tri-switch-option" data-value="all-off" title="Off Off: hide AI on every site (Adobe, Figma, Notion, etc.)">Off Off</label>
+        <span class="tri-switch-thumb" aria-hidden="true"></span>
+      </div>
+    </div>
+    <p class="ai-mode-help" id="ai-mode-help">All AI features on every site remain visible.</p>
+    <h3 class="settings-section-title">Page Transforms</h3>
     <div class="setting-item">
       <span>Bro, are you serious?</span>
       <label class="switch">
@@ -794,6 +1110,14 @@
       </label>
     </div>
     <div class="setting-item">
+      <span>0 Gravity</span>
+      <label class="switch">
+        <input type="checkbox" id="toggle-zerogravity">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <h3 class="settings-section-title">Atom Overlay</h3>
+    <div class="setting-item">
       <span>Atom Mode</span>
       <label class="switch">
         <input type="checkbox" id="toggle-atom">
@@ -807,6 +1131,7 @@
         <span class="slider"></span>
       </label>
     </div>
+    <h3 class="settings-section-title">Companions</h3>
     <div class="setting-item">
       <span>Cat</span>
       <label class="switch">
@@ -821,23 +1146,9 @@
         <span class="slider"></span>
       </label>
     </div>
-    <div class="setting-item">
-      <span>Science Mode</span>
-      <label class="switch">
-        <input type="checkbox" id="toggle-science">
-        <span class="slider"></span>
-      </label>
-    </div>
-    <div class="setting-item">
-      <span>0 Gravity</span>
-      <label class="switch">
-        <input type="checkbox" id="toggle-zerogravity">
-        <span class="slider"></span>
-      </label>
-    </div>
 
     <div class="settings-divider"></div>
-    <h3>The Periodic Table</h3>
+    <h3 class="settings-section-title">The Periodic Table</h3>
     <div class="periodic-table" id="periodic-table">
       <!-- Generated via JS -->
     </div>
@@ -883,22 +1194,25 @@
     </div>
   </div>
 
-  <div class="modal-overlay" id="plugins-overlay" onclick="document.getElementById('plugins-modal').style.display='none'; this.style.display='none';"></div>
-  <div class="plugins-modal" id="plugins-modal">
-    <h2>Available Plugins</h2>
+  <div class="modal-overlay" id="plugins-overlay" onclick="closePluginsModal()"></div>
+  <div class="plugins-modal" id="plugins-modal" role="dialog" aria-labelledby="plugins-modal-title" aria-modal="true">
+    <h2 id="plugins-modal-title">Available Plugins</h2>
+    <p style="font-size:12px; color:var(--theme-text); opacity:0.65; margin: 0 0 14px;">Plugin support is in development — opt-in early access coming in 2.0.</p>
     <div class="plugin-item">
       <span>ProtonVPN</span>
-      <button class="plugin-btn" title="Coming soon in v2.0">Install</button>
+      <button class="plugin-btn" title="Coming soon in v2.0" disabled>Install</button>
     </div>
     <div class="plugin-item">
       <span>NordVPN</span>
-      <button class="plugin-btn" title="Coming soon in v2.0">Install</button>
+      <button class="plugin-btn" title="Coming soon in v2.0" disabled>Install</button>
     </div>
     <div class="plugin-item">
       <span>ExpressVPN</span>
-      <button class="plugin-btn" title="Coming soon in v2.0">Install</button>
+      <button class="plugin-btn" title="Coming soon in v2.0" disabled>Install</button>
     </div>
-    <p style="font-size:12px; color:#666; margin-top:20px;">Plugin architecture is currently in development. Full support for third-party VPN plugins is coming in version 2.0.</p>
+    <div style="margin-top:18px; display:flex; justify-content:flex-end;">
+      <button id="plugins-close-btn" class="settings-action-btn">Close</button>
+    </div>
   </div>
 
   <div id="hover-url-bar"></div>
@@ -938,6 +1252,160 @@
       return id;
     }
 
+    function createTabElement(id, tab, index) {
+      const tabEl = document.createElement('div');
+      let className = 'tab';
+      if (id === activeTabId) className += ' active';
+
+      if (index === tabOrder.length - 1 || tabOrder[index + 1] === activeTabId) {
+        className += ' hide-separator';
+      }
+      tabEl.className = className;
+      tabEl.dataset.tabId = id;
+
+      // Icon (spinner / favicon / placeholder) — kept referenceable so we can swap later
+      const iconHolder = document.createElement('div');
+      iconHolder.className = 'tab-icon';
+      iconHolder.style.cssText = 'width:16px;height:16px;flex-shrink:0;margin-right:6px;display:flex;align-items:center;justify-content:center;';
+      tabEl.appendChild(iconHolder);
+      setTabIcon(iconHolder, tab);
+
+      const titleEl = document.createElement('div');
+      titleEl.className = 'tab-title';
+      titleEl.innerText = tab.title || 'New Tab';
+
+      const closeEl = document.createElement('div');
+      closeEl.className = 'tab-close';
+      closeEl.setAttribute('role', 'button');
+      closeEl.setAttribute('aria-label', 'Close tab');
+      closeEl.textContent = '\u00d7';
+      closeEl.onclick = (e) => {
+        e.stopPropagation();
+        window.browserAPI.closeTab(id);
+      };
+
+      tabEl.onclick = () => {
+        if (activeTabId === id) return;
+        window.browserAPI.switchTab(id);
+        activeTabId = id;
+        renderTabs();
+        urlInput.value = tabs[id].url || '';
+      };
+
+      // Middle-click closes tab
+      tabEl.addEventListener('auxclick', (e) => {
+        if (e.button === 1) {
+          e.preventDefault();
+          window.browserAPI.closeTab(id);
+        }
+      });
+
+      // Hover haptic, throttled to once per second
+      let lastHaptic = 0;
+      tabEl.addEventListener('mouseenter', () => {
+        const now = Date.now();
+        if (window.browserAPI?.triggerHaptic && now - lastHaptic > 1000) {
+          lastHaptic = now;
+          window.browserAPI.triggerHaptic();
+        }
+      });
+
+      tabEl.draggable = true;
+      tabEl.ondragstart = (e) => {
+        dragSourceId = id;
+      };
+      tabEl.ondragover = e => { e.preventDefault(); tabEl.classList.add('drag-over'); };
+      tabEl.ondragleave = e => { tabEl.classList.remove('drag-over'); };
+      tabEl.ondrop = e => {
+        e.preventDefault();
+        tabEl.classList.remove('drag-over');
+        if (dragSourceId && dragSourceId !== id) {
+          if (tabs[id].groupId) {
+            tabs[dragSourceId].groupId = tabs[id].groupId;
+          } else {
+            const newGroupId = createGroup('Group');
+            tabs[id].groupId = newGroupId;
+            tabs[dragSourceId].groupId = newGroupId;
+          }
+          tabOrder.splice(tabOrder.indexOf(dragSourceId), 1);
+          tabOrder.splice(tabOrder.indexOf(id), 0, dragSourceId);
+          renderTabs();
+        }
+      };
+
+      tabEl.oncontextmenu = (e) => {
+        e.preventDefault();
+        if (tabs[id].groupId) {
+          tabs[id].groupId = null;
+        } else {
+          tabs[id].groupId = createGroup('Group');
+        }
+        renderTabs();
+      };
+
+      tabEl.appendChild(titleEl);
+      tabEl.appendChild(closeEl);
+      return tabEl;
+    }
+
+    function setTabIcon(iconHolder, tab) {
+      iconHolder.replaceChildren();
+      if (tab.isLoading) {
+        const spinEl = document.createElement('div');
+        spinEl.className = 'spinner';
+        iconHolder.appendChild(spinEl);
+      } else if (tab.favicon) {
+        const imgEl = document.createElement('img');
+        imgEl.src = tab.favicon;
+        imgEl.alt = '';
+        imgEl.style.width = '16px';
+        imgEl.style.height = '16px';
+        imgEl.onerror = () => {
+          // Fallback to neutral circle if favicon fails to load
+          imgEl.remove();
+          const placeholder = document.createElement('div');
+          placeholder.style.cssText = 'width:16px;height:16px;border-radius:50%;background:#ccc;';
+          iconHolder.appendChild(placeholder);
+        };
+        iconHolder.appendChild(imgEl);
+      } else {
+        const iconEl = document.createElement('div');
+        iconEl.style.cssText = 'width:16px;height:16px;border-radius:50%;background:#ccc;';
+        iconHolder.appendChild(iconEl);
+      }
+    }
+
+    // Update a single tab's DOM in place — avoids rebuilding the whole bar on every event
+    function updateTabElement(id) {
+      if (!tabs[id]) return;
+      const existing = tabsContainer.querySelector(`.tab[data-tab-id="${CSS.escape(id)}"]`);
+      if (!existing) {
+        // Tab not yet in DOM (it was just created or grouping changed); do a full render
+        renderTabs();
+        return;
+      }
+      const tab = tabs[id];
+      const titleEl = existing.querySelector('.tab-title');
+      if (titleEl) titleEl.innerText = tab.title || 'New Tab';
+      const iconHolder = existing.querySelector('.tab-icon');
+      if (iconHolder) setTabIcon(iconHolder, tab);
+    }
+
+    // Update the separators (depends on adjacent active tab) and active class only
+    function updateTabActiveClasses() {
+      const all = tabsContainer.querySelectorAll('.tab');
+      all.forEach((tabEl, i) => {
+        const id = tabEl.dataset.tabId;
+        let cls = 'tab';
+        if (id === activeTabId) cls += ' active';
+        // Separator logic matches createTabElement
+        if (i === all.length - 1 || all[i + 1]?.dataset.tabId === activeTabId) {
+          cls += ' hide-separator';
+        }
+        tabEl.className = cls;
+      });
+    }
+
     function renderTabs() {
       tabsContainer.innerHTML = '';
 
@@ -959,162 +1427,76 @@
           currentGroupId = groupId;
 
           if (groupId && tabGroups[groupId]) {
-             const group = tabGroups[groupId];
-             currentGroupContainer = document.createElement('div');
-             currentGroupContainer.className = 'tab-group-container';
-             if (group.collapsed) currentGroupContainer.classList.add('collapsed');
+            const group = tabGroups[groupId];
+            currentGroupContainer = document.createElement('div');
+            currentGroupContainer.className = 'tab-group-container';
+            if (group.collapsed) currentGroupContainer.classList.add('collapsed');
 
-             const header = document.createElement('div');
-             header.className = 'tab-group-header';
-             header.style.backgroundColor = group.color;
-             header.innerText = group.label;
-             header.title = "Right click to rename";
-             header.onclick = () => {
-                group.collapsed = !group.collapsed;
+            const header = document.createElement('div');
+            header.className = 'tab-group-header';
+            header.style.backgroundColor = group.color;
+            header.innerText = group.label;
+            header.title = "Right click to rename";
+            header.onclick = () => {
+              group.collapsed = !group.collapsed;
+              renderTabs();
+            };
+
+            header.oncontextmenu = (e) => {
+              e.preventDefault();
+              const newName = prompt('Enter new group name:', group.label);
+              if (newName) {
+                group.label = newName;
                 renderTabs();
-             };
+              }
+            };
 
-             header.oncontextmenu = (e) => {
-               e.preventDefault();
-               const newName = prompt('Enter new group name:', group.label);
-               if (newName) {
-                 group.label = newName;
-                 renderTabs();
-               }
-             };
+            const line = document.createElement('div');
+            line.className = 'tab-group-line';
+            line.style.backgroundColor = group.color;
 
-             const line = document.createElement('div');
-             line.className = 'tab-group-line';
-             line.style.backgroundColor = group.color;
+            header.ondragover = e => { e.preventDefault(); header.classList.add('drag-over'); };
+            header.ondragleave = e => { header.classList.remove('drag-over'); };
+            header.ondrop = e => {
+              e.preventDefault();
+              header.classList.remove('drag-over');
+              if (dragSourceId && dragSourceId !== id) {
+                tabs[dragSourceId].groupId = groupId;
+                tabOrder.splice(tabOrder.indexOf(dragSourceId), 1);
+                tabOrder.splice(tabOrder.indexOf(id), 0, dragSourceId);
+                renderTabs();
+              }
+            };
 
-             header.ondragover = e => { e.preventDefault(); header.classList.add('drag-over'); };
-             header.ondragleave = e => { header.classList.remove('drag-over'); };
-             header.ondrop = e => {
-               e.preventDefault();
-               header.classList.remove('drag-over');
-               if (dragSourceId && dragSourceId !== id) {
-                 tabs[dragSourceId].groupId = groupId;
-                 tabOrder.splice(tabOrder.indexOf(dragSourceId), 1);
-                 tabOrder.splice(tabOrder.indexOf(id), 0, dragSourceId);
-                 renderTabs();
-               }
-             };
-
-             currentGroupContainer.appendChild(header);
-             currentGroupContainer.appendChild(line);
-             tabsContainer.appendChild(currentGroupContainer);
+            currentGroupContainer.appendChild(header);
+            currentGroupContainer.appendChild(line);
+            tabsContainer.appendChild(currentGroupContainer);
           } else {
-             currentGroupContainer = null;
+            currentGroupContainer = null;
           }
         }
 
-        const tabEl = document.createElement('div');
-        let className = 'tab';
-        if (id === activeTabId) className += ' active';
-
-        if (i === tabOrder.length - 1 || tabOrder[i+1] === activeTabId) {
-          className += ' hide-separator';
-        }
-        tabEl.className = className;
-
-        if (tab.isLoading) {
-          const spinEl = document.createElement('div');
-          spinEl.className = 'spinner';
-          tabEl.appendChild(spinEl);
-        } else if (tab.favicon) {
-          const imgEl = document.createElement('img');
-          imgEl.src = tab.favicon;
-          imgEl.style.width = '16px';
-          imgEl.style.height = '16px';
-          imgEl.style.marginRight = '6px';
-          tabEl.appendChild(imgEl);
-        } else {
-          const iconEl = document.createElement('div');
-          iconEl.style.width = '16px';
-          iconEl.style.height = '16px';
-          iconEl.style.borderRadius = '50%';
-          iconEl.style.background = '#ccc';
-          iconEl.style.flexShrink = '0';
-          iconEl.style.marginRight = '6px';
-          tabEl.appendChild(iconEl);
-        }
-
-        const titleEl = document.createElement('div');
-        titleEl.className = 'tab-title';
-        titleEl.innerText = tab.title || 'New Tab';
-
-        const closeEl = document.createElement('div');
-        closeEl.className = 'tab-close';
-        closeEl.textContent = '\u00d7';
-        closeEl.onclick = (e) => {
-          e.stopPropagation();
-          window.browserAPI.closeTab(id);
-        };
-
-        tabEl.onclick = () => {
-          window.browserAPI.switchTab(id);
-          activeTabId = id;
-          renderTabs();
-          urlInput.value = tabs[id].url || '';
-        };
-
-        tabEl.addEventListener('mouseenter', () => {
-          if (window.browserAPI && window.browserAPI.triggerHaptic) {
-            window.browserAPI.triggerHaptic();
-          }
-        });
-
-        tabEl.draggable = true;
-        tabEl.ondragstart = (e) => {
-          dragSourceId = id;
-        };
-        tabEl.ondragover = e => { e.preventDefault(); tabEl.classList.add('drag-over'); };
-        tabEl.ondragleave = e => { tabEl.classList.remove('drag-over'); };
-        tabEl.ondrop = e => {
-          e.preventDefault();
-          tabEl.classList.remove('drag-over');
-          if (dragSourceId && dragSourceId !== id) {
-            if (tabs[id].groupId) {
-              tabs[dragSourceId].groupId = tabs[id].groupId;
-            } else {
-              const newGroupId = createGroup('Group');
-              tabs[id].groupId = newGroupId;
-              tabs[dragSourceId].groupId = newGroupId;
-            }
-            tabOrder.splice(tabOrder.indexOf(dragSourceId), 1);
-            tabOrder.splice(tabOrder.indexOf(id), 0, dragSourceId);
-            renderTabs();
-          }
-        };
-
-        tabEl.oncontextmenu = (e) => {
-          e.preventDefault();
-          if (tabs[id].groupId) {
-            tabs[id].groupId = null;
-            renderTabs();
-          } else {
-             tabs[id].groupId = createGroup('Group');
-             renderTabs();
-          }
-        };
-
-        tabEl.appendChild(titleEl);
-        tabEl.appendChild(closeEl);
-
+        const tabEl = createTabElement(id, tab, i);
         if (currentGroupContainer) {
-           currentGroupContainer.appendChild(tabEl);
+          currentGroupContainer.appendChild(tabEl);
         } else {
-           tabsContainer.appendChild(tabEl);
+          tabsContainer.appendChild(tabEl);
         }
       }
     }
 
     window.browserAPI.onTabCreated((id) => {
+      const isInitialRestore = typeof tabs.__initialized === 'undefined';
       tabs[id] = { url: 'https://www.google.com', title: 'Loading...' };
       activeTabId = id;
       renderTabs();
-      // Auto-focus URL bar so user can start typing immediately
-      setTimeout(() => { urlInput.focus(); urlInput.select(); }, 100);
+      if (isInitialRestore) {
+        // Mark first-batch tabs as not user-initiated (no autofocus when restoring)
+        tabs.__initialized = true;
+      } else {
+        // Auto-focus URL bar so user can start typing immediately
+        setTimeout(() => { urlInput.focus(); urlInput.select(); }, 100);
+      }
     });
 
     window.browserAPI.onTabClosed((id) => {
@@ -1126,7 +1508,7 @@
       window.browserAPI.onTabSwitched((id) => {
         if (tabs[id]) {
           activeTabId = id;
-          renderTabs();
+          updateTabActiveClasses();
           urlInput.value = tabs[id].url || '';
         }
       });
@@ -1149,7 +1531,7 @@
     window.browserAPI.onTitleChanged((id, title) => {
       if (tabs[id]) {
         tabs[id].title = title;
-        renderTabs();
+        updateTabElement(id);
       }
     });
 
@@ -1171,12 +1553,17 @@
       }
     }
 
+    let currentAiMode = 'on';
+
     function getSearchUrl(query, engine) {
       const encodedQuery = encodeURIComponent(query);
       if (engine === 'yahoo') {
         return 'https://search.yahoo.com/search?p=' + encodedQuery;
       } else if (engine === 'duckduckgo') {
         return 'https://duckduckgo.com/?q=' + encodedQuery;
+      }
+      if (currentAiMode === 'search-off' || currentAiMode === 'all-off') {
+        return 'https://www.google.com/search?q=' + encodedQuery + '&udm=14';
       }
       return 'https://www.google.com/search?q=' + encodedQuery;
     }
@@ -1229,11 +1616,6 @@
       settingsOpen = false;
       settingsPanel.style.display = 'none';
     });
-    window.browserAPI.onScienceModeChanged((enabled) => {
-      const lab = document.getElementById('science-lab');
-      lab.style.display = enabled ? 'flex' : 'none';
-      if (enabled) requestAnimationFrame(() => { labResize(); labReset(); });
-    });
     window.browserAPI.onThemeChanged((gradient, textColor) => {
       document.documentElement.style.setProperty('--theme-color', gradient);
       document.documentElement.style.setProperty('--theme-text', textColor);
@@ -1246,11 +1628,66 @@
       document.body.classList.toggle('window-inactive', isMac && !focused);
     });
 
+    // Collect all settings toggles up-front so they're available to restored-state
+    // and other early callbacks regardless of declaration order.
     const togglePapyrus = document.getElementById('toggle-papyrus');
     const toggleComicSans = document.getElementById('toggle-comicsans');
     const toggleAtom = document.getElementById('toggle-atom');
+    const toggleBlackHole = document.getElementById('toggle-blackhole');
     const toggleCat = document.getElementById('toggle-cat');
-    const toggleScience = document.getElementById('toggle-science');
+    const toggleGoose = document.getElementById('toggle-goose');
+    const toggleZeroGravity = document.getElementById('toggle-zerogravity');
+
+    // AI mode 3-position switch
+    const aiModeRadios = Array.from(document.querySelectorAll('input[name="ai-mode"]'));
+    const aiModeCurrentLabel = document.getElementById('ai-mode-current');
+    const aiModeHelpText = document.getElementById('ai-mode-help');
+    const aiToolbarBtn = document.getElementById('ai-mode-btn');
+    const aiToolbarBadge = document.getElementById('ai-toolbar-badge');
+    const AI_MODE_LABELS = { 'on': 'On', 'search-off': 'Off', 'all-off': 'Off Off' };
+    const AI_MODE_HELP = {
+      'on': 'All AI features on every site remain visible.',
+      'search-off': 'Google search results no longer show AI Overview or AI Mode.',
+      'all-off': 'AI widgets hidden on every site — Google, Adobe, Figma, Notion, etc.'
+    };
+    function setAiModeUi(mode) {
+      const valid = ['on', 'search-off', 'all-off'].includes(mode) ? mode : 'on';
+      currentAiMode = valid;
+      const radio = aiModeRadios.find(r => r.value === valid);
+      if (radio && !radio.checked) radio.checked = true;
+      if (aiModeCurrentLabel) aiModeCurrentLabel.textContent = AI_MODE_LABELS[valid];
+      if (aiModeHelpText) aiModeHelpText.textContent = AI_MODE_HELP[valid];
+      if (aiToolbarBtn && aiToolbarBadge) {
+        aiToolbarBtn.classList.remove('mode-on', 'mode-search-off', 'mode-all-off');
+        aiToolbarBtn.classList.add(`mode-${valid}`);
+        aiToolbarBadge.textContent = AI_MODE_LABELS[valid];
+        aiToolbarBtn.title = `AI Mode: ${AI_MODE_LABELS[valid]} — ${AI_MODE_HELP[valid]} (Click to cycle)`;
+      }
+    }
+    aiModeRadios.forEach(r => r.addEventListener('change', (e) => {
+      if (!e.target.checked) return;
+      const mode = e.target.value;
+      setAiModeUi(mode);
+      if (window.browserAPI && window.browserAPI.setAiMode) {
+        window.browserAPI.setAiMode(mode);
+      }
+    }));
+    if (aiToolbarBtn) {
+      aiToolbarBtn.addEventListener('click', () => {
+        const order = ['on', 'search-off', 'all-off'];
+        const nextIndex = (order.indexOf(currentAiMode) + 1) % order.length;
+        const nextMode = order[nextIndex];
+        setAiModeUi(nextMode);
+        if (window.browserAPI && window.browserAPI.setAiMode) {
+          window.browserAPI.setAiMode(nextMode);
+        }
+      });
+    }
+    if (window.browserAPI && window.browserAPI.onAiModeUpdated) {
+      window.browserAPI.onAiModeUpdated((mode) => {
+        setAiModeUi(mode);
+      });
+    }
 
     window.browserAPI.onRestoredState((restoredState) => {
       const settings = restoredState && restoredState.settings;
@@ -1261,9 +1698,8 @@
       toggleBlackHole.checked = Boolean(settings.blackhole);
       toggleCat.checked = Boolean(settings.cat);
       toggleGoose.checked = Boolean(settings.goose);
-      toggleScience.checked = Boolean(settings.science);
       toggleZeroGravity.checked = Boolean(settings.zerogravity);
-      document.getElementById('science-lab').style.display = settings.science ? 'flex' : 'none';
+      setAiModeUi(settings.aiMode);
       window._historyLog = Array.isArray(restoredState.history) ? restoredState.history : [];
     });
 
@@ -1296,7 +1732,7 @@
       window.browserAPI.onLoadingState((id, isLoading) => {
         if (tabs[id]) {
           tabs[id].isLoading = isLoading;
-          renderTabs();
+          updateTabElement(id);
         }
       });
     }
@@ -1305,7 +1741,7 @@
       window.browserAPI.onFaviconChanged((id, favicon) => {
         if (tabs[id]) {
           tabs[id].favicon = favicon;
-          renderTabs();
+          updateTabElement(id);
         }
       });
     }
@@ -1362,7 +1798,6 @@
       window.browserAPI.toggleSetting('atom', e.target.checked);
     });
 
-    const toggleBlackHole = document.getElementById('toggle-blackhole');
     toggleBlackHole.addEventListener('change', (e) => {
       window.browserAPI.toggleSetting('blackhole', e.target.checked);
     });
@@ -1375,7 +1810,6 @@
       }
     });
 
-    const toggleGoose = document.getElementById('toggle-goose');
     toggleGoose.addEventListener('change', (e) => {
       window.browserAPI.toggleSetting('goose', e.target.checked);
       if (e.target.checked && !toggleCat.checked) {
@@ -1384,13 +1818,6 @@
       }
     });
 
-    toggleScience.addEventListener('change', (e) => {
-      document.getElementById('science-lab').style.display = e.target.checked ? 'flex' : 'none';
-      if (e.target.checked) { requestAnimationFrame(() => { labResize(); labReset(); }); }
-      window.browserAPI.toggleSetting('science', e.target.checked);
-    });
-
-    const toggleZeroGravity = document.getElementById('toggle-zerogravity');
     toggleZeroGravity.addEventListener('change', (e) => {
       window.browserAPI.toggleSetting('zerogravity', e.target.checked);
     });
@@ -1601,9 +2028,6 @@
       document.getElementById('lab-readout').textContent = 'Temperature: ' + average.toFixed(1) + ' C\npH: ' + ph.toFixed(1) + '\nEnergy: ' + Math.round(labEnergy) + ' J';
       requestAnimationFrame(drawLab);
     }
-    requestAnimationFrame(() => { labResize(); labReset(); });
-    requestAnimationFrame(drawLab);
-    window.addEventListener('resize', () => requestAnimationFrame(labResize));
 
     // Generate Periodic Table
     const ptContainer = document.getElementById('periodic-table');
@@ -1624,16 +2048,20 @@
     const elements = [{"n":1,"sym":"H","c":1,"r":1,"type":"nonmetal"},{"n":2,"sym":"He","c":18,"r":1,"type":"noble"},{"n":3,"sym":"Li","c":1,"r":2,"type":"alkali"},{"n":4,"sym":"Be","c":2,"r":2,"type":"alkaline"},{"n":5,"sym":"B","c":13,"r":2,"type":"metalloid"},{"n":6,"sym":"C","c":14,"r":2,"type":"nonmetal"},{"n":7,"sym":"N","c":15,"r":2,"type":"nonmetal"},{"n":8,"sym":"O","c":16,"r":2,"type":"nonmetal"},{"n":9,"sym":"F","c":17,"r":2,"type":"halogen"},{"n":10,"sym":"Ne","c":18,"r":2,"type":"noble"},{"n":11,"sym":"Na","c":1,"r":3,"type":"alkali"},{"n":12,"sym":"Mg","c":2,"r":3,"type":"alkaline"},{"n":13,"sym":"Al","c":13,"r":3,"type":"postTransition"},{"n":14,"sym":"Si","c":14,"r":3,"type":"metalloid"},{"n":15,"sym":"P","c":15,"r":3,"type":"nonmetal"},{"n":16,"sym":"S","c":16,"r":3,"type":"nonmetal"},{"n":17,"sym":"Cl","c":17,"r":3,"type":"halogen"},{"n":18,"sym":"Ar","c":18,"r":3,"type":"noble"},{"n":19,"sym":"K","c":1,"r":4,"type":"alkali"},{"n":20,"sym":"Ca","c":2,"r":4,"type":"alkaline"},{"n":21,"sym":"Sc","c":3,"r":4,"type":"transition"},{"n":22,"sym":"Ti","c":4,"r":4,"type":"transition"},{"n":23,"sym":"V","c":5,"r":4,"type":"transition"},{"n":24,"sym":"Cr","c":6,"r":4,"type":"transition"},{"n":25,"sym":"Mn","c":7,"r":4,"type":"transition"},{"n":26,"sym":"Fe","c":8,"r":4,"type":"transition"},{"n":27,"sym":"Co","c":9,"r":4,"type":"transition"},{"n":28,"sym":"Ni","c":10,"r":4,"type":"transition"},{"n":29,"sym":"Cu","c":11,"r":4,"type":"transition"},{"n":30,"sym":"Zn","c":12,"r":4,"type":"transition"},{"n":31,"sym":"Ga","c":13,"r":4,"type":"postTransition"},{"n":32,"sym":"Ge","c":14,"r":4,"type":"metalloid"},{"n":33,"sym":"As","c":15,"r":4,"type":"metalloid"},{"n":34,"sym":"Se","c":16,"r":4,"type":"nonmetal"},{"n":35,"sym":"Br","c":17,"r":4,"type":"halogen"},{"n":36,"sym":"Kr","c":18,"r":4,"type":"noble"},{"n":37,"sym":"Rb","c":1,"r":5,"type":"alkali"},{"n":38,"sym":"Sr","c":2,"r":5,"type":"alkaline"},{"n":39,"sym":"Y","c":3,"r":5,"type":"transition"},{"n":40,"sym":"Zr","c":4,"r":5,"type":"transition"},{"n":41,"sym":"Nb","c":5,"r":5,"type":"transition"},{"n":42,"sym":"Mo","c":6,"r":5,"type":"transition"},{"n":43,"sym":"Tc","c":7,"r":5,"type":"transition"},{"n":44,"sym":"Ru","c":8,"r":5,"type":"transition"},{"n":45,"sym":"Rh","c":9,"r":5,"type":"transition"},{"n":46,"sym":"Pd","c":10,"r":5,"type":"transition"},{"n":47,"sym":"Ag","c":11,"r":5,"type":"transition"},{"n":48,"sym":"Cd","c":12,"r":5,"type":"transition"},{"n":49,"sym":"In","c":13,"r":5,"type":"postTransition"},{"n":50,"sym":"Sn","c":14,"r":5,"type":"postTransition"},{"n":51,"sym":"Sb","c":15,"r":5,"type":"metalloid"},{"n":52,"sym":"Te","c":16,"r":5,"type":"metalloid"},{"n":53,"sym":"I","c":17,"r":5,"type":"halogen"},{"n":54,"sym":"Xe","c":18,"r":5,"type":"noble"},{"n":55,"sym":"Cs","c":1,"r":6,"type":"alkali"},{"n":56,"sym":"Ba","c":2,"r":6,"type":"alkaline"},{"n":72,"sym":"Hf","c":4,"r":6,"type":"transition"},{"n":73,"sym":"Ta","c":5,"r":6,"type":"transition"},{"n":74,"sym":"W","c":6,"r":6,"type":"transition"},{"n":75,"sym":"Re","c":7,"r":6,"type":"transition"},{"n":76,"sym":"Os","c":8,"r":6,"type":"transition"},{"n":77,"sym":"Ir","c":9,"r":6,"type":"transition"},{"n":78,"sym":"Pt","c":10,"r":6,"type":"transition"},{"n":79,"sym":"Au","c":11,"r":6,"type":"transition"},{"n":80,"sym":"Hg","c":12,"r":6,"type":"transition"},{"n":81,"sym":"Tl","c":13,"r":6,"type":"postTransition"},{"n":82,"sym":"Pb","c":14,"r":6,"type":"postTransition"},{"n":83,"sym":"Bi","c":15,"r":6,"type":"postTransition"},{"n":84,"sym":"Po","c":16,"r":6,"type":"postTransition"},{"n":85,"sym":"At","c":17,"r":6,"type":"halogen"},{"n":86,"sym":"Rn","c":18,"r":6,"type":"noble"},{"n":87,"sym":"Fr","c":1,"r":7,"type":"alkali"},{"n":88,"sym":"Ra","c":2,"r":7,"type":"alkaline"},{"n":104,"sym":"Rf","c":4,"r":7,"type":"transition"},{"n":105,"sym":"Db","c":5,"r":7,"type":"transition"},{"n":106,"sym":"Sg","c":6,"r":7,"type":"transition"},{"n":107,"sym":"Bh","c":7,"r":7,"type":"transition"},{"n":108,"sym":"Hs","c":8,"r":7,"type":"transition"},{"n":109,"sym":"Mt","c":9,"r":7,"type":"transition"},{"n":110,"sym":"Ds","c":10,"r":7,"type":"transition"},{"n":111,"sym":"Rg","c":11,"r":7,"type":"transition"},{"n":112,"sym":"Cn","c":12,"r":7,"type":"transition"},{"n":113,"sym":"Nh","c":13,"r":7,"type":"postTransition"},{"n":114,"sym":"Fl","c":14,"r":7,"type":"postTransition"},{"n":115,"sym":"Mc","c":15,"r":7,"type":"postTransition"},{"n":116,"sym":"Lv","c":16,"r":7,"type":"postTransition"},{"n":117,"sym":"Ts","c":17,"r":7,"type":"halogen"},{"n":118,"sym":"Og","c":18,"r":7,"type":"noble"},{"n":57,"sym":"La","c":3,"r":9,"type":"lanthanide"},{"n":58,"sym":"Ce","c":4,"r":9,"type":"lanthanide"},{"n":59,"sym":"Pr","c":5,"r":9,"type":"lanthanide"},{"n":60,"sym":"Nd","c":6,"r":9,"type":"lanthanide"},{"n":61,"sym":"Pm","c":7,"r":9,"type":"lanthanide"},{"n":62,"sym":"Sm","c":8,"r":9,"type":"lanthanide"},{"n":63,"sym":"Eu","c":9,"r":9,"type":"lanthanide"},{"n":64,"sym":"Gd","c":10,"r":9,"type":"lanthanide"},{"n":65,"sym":"Tb","c":11,"r":9,"type":"lanthanide"},{"n":66,"sym":"Dy","c":12,"r":9,"type":"lanthanide"},{"n":67,"sym":"Ho","c":13,"r":9,"type":"lanthanide"},{"n":68,"sym":"Er","c":14,"r":9,"type":"lanthanide"},{"n":69,"sym":"Tm","c":15,"r":9,"type":"lanthanide"},{"n":70,"sym":"Yb","c":16,"r":9,"type":"lanthanide"},{"n":71,"sym":"Lu","c":17,"r":9,"type":"lanthanide"},{"n":89,"sym":"Ac","c":3,"r":10,"type":"actinide"},{"n":90,"sym":"Th","c":4,"r":10,"type":"actinide"},{"n":91,"sym":"Pa","c":5,"r":10,"type":"actinide"},{"n":92,"sym":"U","c":6,"r":10,"type":"actinide"},{"n":93,"sym":"Np","c":7,"r":10,"type":"actinide"},{"n":94,"sym":"Pu","c":8,"r":10,"type":"actinide"},{"n":95,"sym":"Am","c":9,"r":10,"type":"actinide"},{"n":96,"sym":"Cm","c":10,"r":10,"type":"actinide"},{"n":97,"sym":"Bk","c":11,"r":10,"type":"actinide"},{"n":98,"sym":"Cf","c":12,"r":10,"type":"actinide"},{"n":99,"sym":"Es","c":13,"r":10,"type":"actinide"},{"n":100,"sym":"Fm","c":14,"r":10,"type":"actinide"},{"n":101,"sym":"Md","c":15,"r":10,"type":"actinide"},{"n":102,"sym":"No","c":16,"r":10,"type":"actinide"},{"n":103,"sym":"Lr","c":17,"r":10,"type":"actinide"}]
 ;
 
-    function getContrastYIQ(hexcolor){
+    function getContrastYIQ(hexcolor) {
+        if (typeof hexcolor !== 'string') return 'white';
         if (hexcolor.startsWith('#')) hexcolor = hexcolor.slice(1);
-        var r = parseInt(hexcolor.substr(0,2),16);
-        var g = parseInt(hexcolor.substr(2,2),16);
-        var b = parseInt(hexcolor.substr(4,2),16);
-        var yiq = ((r*299)+(g*587)+(b*114))/1000;
+        // Expand short hex (#fff → ffffff)
+        if (hexcolor.length === 3) hexcolor = hexcolor.split('').map(ch => ch + ch).join('');
+        const r = parseInt(hexcolor.substr(0, 2), 16);
+        const g = parseInt(hexcolor.substr(2, 2), 16);
+        const b = parseInt(hexcolor.substr(4, 2), 16);
+        if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return 'white';
+        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
         return (yiq >= 128) ? 'black' : 'white';
     }
 
-      const surfacePalettes = {
+    const surfacePalettes = {
         metal: ['#f4f7f8', '#8b969d', '#dce3e6', '#68747b'],
         transition: ['#f8fafb', '#7c8790', '#e6ecef', '#526069'],
         postTransition: ['#f2f4f5', '#89969c', '#d8e0e3', '#69777d'],
@@ -1669,6 +2097,22 @@
         return colors[1];
       }
 
+    // Element name lookup (symbol → full name) so tooltips are informative
+    const elementNames = {
+      H: 'Hydrogen', He: 'Helium', Li: 'Lithium', Be: 'Beryllium', B: 'Boron', C: 'Carbon', N: 'Nitrogen', O: 'Oxygen', F: 'Fluorine', Ne: 'Neon',
+      Na: 'Sodium', Mg: 'Magnesium', Al: 'Aluminium', Si: 'Silicon', P: 'Phosphorus', S: 'Sulfur', Cl: 'Chlorine', Ar: 'Argon',
+      K: 'Potassium', Ca: 'Calcium', Sc: 'Scandium', Ti: 'Titanium', V: 'Vanadium', Cr: 'Chromium', Mn: 'Manganese', Fe: 'Iron', Co: 'Cobalt', Ni: 'Nickel', Cu: 'Copper', Zn: 'Zinc',
+      Ga: 'Gallium', Ge: 'Germanium', As: 'Arsenic', Se: 'Selenium', Br: 'Bromine', Kr: 'Krypton',
+      Rb: 'Rubidium', Sr: 'Strontium', Y: 'Yttrium', Zr: 'Zirconium', Nb: 'Niobium', Mo: 'Molybdenum', Tc: 'Technetium', Ru: 'Ruthenium', Rh: 'Rhodium', Pd: 'Palladium', Ag: 'Silver', Cd: 'Cadmium',
+      In: 'Indium', Sn: 'Tin', Sb: 'Antimony', Te: 'Tellurium', I: 'Iodine', Xe: 'Xenon',
+      Cs: 'Caesium', Ba: 'Barium', La: 'Lanthanum', Ce: 'Cerium', Pr: 'Praseodymium', Nd: 'Neodymium', Pm: 'Promethium', Sm: 'Samarium', Eu: 'Europium', Gd: 'Gadolinium', Tb: 'Terbium', Dy: 'Dysprosium', Ho: 'Holmium', Er: 'Erbium', Tm: 'Thulium', Yb: 'Ytterbium', Lu: 'Lutetium',
+      Hf: 'Hafnium', Ta: 'Tantalum', W: 'Tungsten', Re: 'Rhenium', Os: 'Osmium', Ir: 'Iridium', Pt: 'Platinum', Au: 'Gold', Hg: 'Mercury',
+      Tl: 'Thallium', Pb: 'Lead', Bi: 'Bismuth', Po: 'Polonium', At: 'Astatine', Rn: 'Radon',
+      Fr: 'Francium', Ra: 'Radium', Ac: 'Actinium', Th: 'Thorium', Pa: 'Protactinium', U: 'Uranium', Np: 'Neptunium', Pu: 'Plutonium', Am: 'Americium', Cm: 'Curium', Bk: 'Berkelium', Cf: 'Californium', Es: 'Einsteinium', Fm: 'Fermium', Md: 'Mendelevium', No: 'Nobelium', Lr: 'Lawrencium',
+      Rf: 'Rutherfordium', Db: 'Dubnium', Sg: 'Seaborgium', Bh: 'Bohrium', Hs: 'Hassium', Mt: 'Meitnerium', Ds: 'Darmstadtium', Rg: 'Roentgenium', Cn: 'Copernicium',
+      Nh: 'Nihonium', Fl: 'Flerovium', Mc: 'Moscovium', Lv: 'Livermorium', Ts: 'Tennessine', Og: 'Oganesson'
+    };
+
     for (let r = 1; r <= 10; r++) {
       for (let c = 1; c <= 18; c++) {
         const el = elements.find(e => e.r === r && e.c === c);
@@ -1678,9 +2122,12 @@
           cell.className = 'pt-element';
           cell.style.backgroundColor = bgColor;
           cell.innerHTML = '<span class="pt-number">' + el.n + '</span><span class="pt-symbol">' + el.sym + '</span>';
-          cell.title = 'Atomic Number: ' + el.n;
-
-          cell.onclick = () => {
+          const name = elementNames[el.sym] || el.sym;
+          cell.title = `${name} (${el.sym}) — Atomic Number ${el.n}`;
+          cell.setAttribute('role', 'button');
+          cell.setAttribute('aria-label', `Select ${name}, atomic number ${el.n}`);
+          cell.tabIndex = 0;
+          const selectElement = () => {
             const surfaceGradient = getSurfaceGradient(el);
             const surfaceBaseColor = getSurfaceBaseColor(el);
             document.documentElement.style.setProperty('--theme-color', surfaceGradient);
@@ -1688,8 +2135,13 @@
             // Send element data to main process for atom mode
             window.browserAPI.selectElement(el.n, surfaceBaseColor, surfaceGradient, getContrastYIQ(surfaceBaseColor));
           };
+          cell.onclick = selectElement;
+          cell.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectElement(); }
+          });
         } else {
           cell.className = 'pt-empty';
+          cell.setAttribute('aria-hidden', 'true');
         }
         ptContainer.appendChild(cell);
       }

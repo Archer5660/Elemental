@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const CURRENT_VERSION = 1;
+const VALID_AI_MODES = ['on', 'search-off', 'all-off'];
 const DEFAULT_STATE = {
   version: CURRENT_VERSION,
   settings: {
@@ -11,8 +12,8 @@ const DEFAULT_STATE = {
     goose: false,
     atom: false,
     blackhole: false,
-    science: false,
-    zerogravity: false
+    zerogravity: false,
+    aiMode: 'on'
   },
   selectedElement: { atomicNumber: 1, color: '#a0e6ff' },
   history: [],
@@ -27,7 +28,17 @@ function normalizeState(value) {
   const state = cloneDefaultState();
   if (!value || typeof value !== 'object') return state;
   if (value.version === CURRENT_VERSION) {
-    Object.assign(state.settings, value.settings);
+    if (value.settings && typeof value.settings === 'object') {
+      for (const [key, val] of Object.entries(value.settings)) {
+        if (!(key in state.settings)) continue;
+        if (key === 'aiMode') {
+          if (VALID_AI_MODES.includes(val)) state.settings.aiMode = val;
+          // else: leave the default 'on' in place
+        } else if (typeof state.settings[key] === 'boolean') {
+          state.settings[key] = Boolean(val);
+        }
+      }
+    }
     if (value.selectedElement && Number.isInteger(value.selectedElement.atomicNumber)) {
       state.selectedElement = {
         atomicNumber: value.selectedElement.atomicNumber,
@@ -66,4 +77,4 @@ function createStateStore(userDataPath) {
   };
 }
 
-module.exports = { createStateStore, CURRENT_VERSION };
+module.exports = { createStateStore, CURRENT_VERSION, VALID_AI_MODES };

@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld('browserAPI', {
   onUrlChanged: (callback) => ipcRenderer.on('url-changed', (event, tabId, url) => callback(tabId, url)),
   onTitleChanged: (callback) => ipcRenderer.on('title-changed', (event, tabId, title) => callback(tabId, title)),
   toggleSetting: (setting, value) => ipcRenderer.send('toggle-setting', setting, value),
+  setAiMode: (mode) => ipcRenderer.send('set-ai-mode', mode),
+  onAiModeUpdated: (callback) => ipcRenderer.on('ai-mode-updated', (event, mode) => callback(mode)),
 
   newTab: () => ipcRenderer.send('new-tab'),
   closeTab: (id) => ipcRenderer.send('close-tab', id),
@@ -17,7 +19,6 @@ contextBridge.exposeInMainWorld('browserAPI', {
   onTabSwitched: (callback) => ipcRenderer.on('switch-tab', (event, id) => callback(id)),
   onOpenSettings: (callback) => ipcRenderer.on('open-settings', () => callback()),
   onSettingsOverlayClosed: (callback) => ipcRenderer.on('settings-overlay-closed', () => callback()),
-  onScienceModeChanged: (callback) => ipcRenderer.on('science-mode-changed', (_event, enabled) => callback(enabled)),
   onThemeChanged: (callback) => ipcRenderer.on('theme-changed', (_event, gradient, textColor) => callback(gradient, textColor)),
   onPageFullscreenChanged: (callback) => ipcRenderer.on('page-fullscreen-changed', (_event, active) => callback(active)),
   onWindowFocusChanged: (callback) => ipcRenderer.on('window-focus-changed', (_event, focused, isMac) => callback(focused, isMac)),
