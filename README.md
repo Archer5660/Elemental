@@ -115,7 +115,3 @@ Messages is not enabled just by building the desktop app. It requires a Firebase
 - [`apps/`](./apps/) — built desktop and Android outputs plus Apple platform projects.
 - [`supabase/`](./supabase/) — database migrations and Edge Function.
 - [`firebase/`](./firebase/) — Firestore rules and Messages setup instructions.
-
-## Security
-
-Do not commit passwords, signing keys, service-account JSON, Supabase service-role keys, or other private credentials. Public client configuration such as Firebase Web API keys is not a substitute for server-side authorization; follow the backend setup instructions and keep private keys in the designated secret store.
